@@ -2,7 +2,7 @@ import { Inter } from "next/font/google"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { hasLocale, NextIntlClientProvider } from "next-intl"
-import { getTranslations } from "next-intl/server"
+import { getTranslations, setRequestLocale } from "next-intl/server"
 import { Analytics } from "@/components/analytics"
 import { ModeToggle } from "@/components/mode-toggle"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -24,6 +24,7 @@ export default async function LocaleLayout({
     notFound()
   }
 
+  setRequestLocale(locale)
   const t = await getTranslations()
 
   return (
