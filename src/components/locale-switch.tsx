@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation"
 import EarthIcon from "@/assets/svg/earth.svg"
-import { locales } from "@/i18n/locales.json"
+import locales from "@/i18n/locales.json"
 
 interface LocaleSwitchProps {
   currentLocale: string
@@ -18,9 +18,11 @@ export function LocaleSwitch({ currentLocale }: LocaleSwitchProps) {
     router.push(segments.join("/"))
   }
   const handleClick = () => {
-    const currentIndex = locales.findIndex((locale) => locale === currentLocale)
-    const nextIndex = (currentIndex + 1) % locales.length
-    const nextLocale = locales.at(nextIndex)
+    const currentIndex = locales.locales.findIndex(
+      (locale) => locale === currentLocale,
+    )
+    const nextIndex = (currentIndex + 1) % locales.locales.length
+    const nextLocale = locales.locales.at(nextIndex)
 
     nextLocale && changeLocale(nextLocale)
   }
