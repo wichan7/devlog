@@ -1,4 +1,4 @@
 {
-  "locales": ["ko", "en"],
+  "locales": ["ko", "en", "ja"],
   "defaultLocale": "ko"
 }
