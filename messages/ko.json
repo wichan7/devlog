@@ -1,4 +1,8 @@
 {
+  "metadata": {
+    "title": "위찬의 기술 블로그",
+    "description": "가볍고 재미있는 기술 이야기"
+  },
   "menu": {
     "home": "홈",
     "about": "소개"

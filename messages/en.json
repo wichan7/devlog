@@ -1,4 +1,8 @@
 {
+  "metadata": {
+    "title": "Wichan's Tech Blog",
+    "description": "Light and enjoyable tech stories"
+  },
   "menu": {
     "home": "Home",
     "about": "About"

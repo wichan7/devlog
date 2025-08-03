@@ -1,4 +1,8 @@
 {
+  "metadata": {
+    "title": "ウィチャンの技術ブログ",
+    "description": "気軽に読める面白い技術の話"
+  },
   "menu": {
     "home": "ホーム",
     "about": "紹介"
