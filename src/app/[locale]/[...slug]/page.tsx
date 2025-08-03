@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 
 import { Mdx } from "@/components/mdx-components"
-import locales from "@/i18n/locales.json"
+import { locales } from "@/i18n/locales.json"
 
 interface PageProps {
   params: {
@@ -39,7 +39,7 @@ export async function generateMetadata({
 }
 
 export async function generateStaticParams(): Promise<PageProps["params"][]> {
-  return locales.locales.flatMap((locale) =>
+  return locales.flatMap((locale) =>
     allPages
       .filter((page) => page.locale === locale)
       .map((page) => ({
