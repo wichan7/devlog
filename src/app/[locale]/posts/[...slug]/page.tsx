@@ -1,24 +1,25 @@
-import { notFound } from "next/navigation"
 import { allPosts } from "contentlayer/generated"
-
-import { Metadata } from "next"
+import type { Metadata } from "next"
+import { notFound } from "next/navigation"
 import { Mdx } from "@/components/mdx-components"
+import locales from "@/i18n/locales.json"
 
 interface PostProps {
   params: {
     slug: string[]
+    locale: string
   }
 }
 
 async function getPostFromParams(params: PostProps["params"]) {
   const slug = params?.slug?.join("/")
-  const post = allPosts.find((post) => post.slugAsParams === slug)
+  const currentLocale = params?.locale
 
-  if (!post) {
-    null
-  }
+  const post = allPosts.find(
+    (post) => post.slug === `/${currentLocale}/posts/${slug}`,
+  )
 
-  return post
+  return post ?? null
 }
 
 export async function generateMetadata({
@@ -37,9 +38,14 @@ export async function generateMetadata({
 }
 
 export async function generateStaticParams(): Promise<PostProps["params"][]> {
-  return allPosts.map((post) => ({
-    slug: post.slugAsParams.split("/"),
-  }))
+  return locales.locales.flatMap((locale) =>
+    allPosts
+      .filter((post) => post.locale === locale)
+      .map((post) => ({
+        slug: post.slugAsParams.split("/"),
+        locale,
+      })),
+  )
 }
 
 export default async function PostPage({ params }: PostProps) {

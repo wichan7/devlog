@@ -1,24 +1,26 @@
-import { notFound } from "next/navigation"
-import { Metadata } from "next"
 import { allPages } from "contentlayer/generated"
+import type { Metadata } from "next"
+import { notFound } from "next/navigation"
 
 import { Mdx } from "@/components/mdx-components"
+import locales from "@/i18n/locales.json"
 
 interface PageProps {
   params: {
     slug: string[]
+    locale: string
   }
 }
 
 async function getPageFromParams(params: PageProps["params"]) {
   const slug = params?.slug?.join("/")
-  const page = allPages.find((page) => page.slugAsParams === slug)
+  const currentLocale = params?.locale
 
-  if (!page) {
-    null
-  }
+  const page = allPages.find(
+    (page) => page.slug === `/${currentLocale}/pages/${slug}`,
+  )
 
-  return page
+  return page ?? null
 }
 
 export async function generateMetadata({
@@ -37,9 +39,14 @@ export async function generateMetadata({
 }
 
 export async function generateStaticParams(): Promise<PageProps["params"][]> {
-  return allPages.map((page) => ({
-    slug: page.slugAsParams.split("/"),
-  }))
+  return locales.locales.flatMap((locale) =>
+    allPages
+      .filter((page) => page.locale === locale)
+      .map((page) => ({
+        slug: page.slugAsParams.split("/"),
+        locale,
+      })),
+  )
 }
 
 export default async function PagePage({ params }: PageProps) {

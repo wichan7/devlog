@@ -10,11 +10,15 @@ const computedFields = {
     type: "string",
     resolve: (doc) => doc._raw.flattenedPath.split("/").slice(1).join("/"),
   },
+  locale: {
+    type: "string",
+    resolve: (doc) => doc._raw.sourceFilePath.split("/")[0], // /ko/posts/abc.mdx → 'ko'
+  },
 }
 
 export const Page = defineDocumentType(() => ({
   name: "Page",
-  filePathPattern: `pages/**/*.mdx`,
+  filePathPattern: `*/pages/**/*.mdx`,
   contentType: "mdx",
   fields: {
     title: {
@@ -24,13 +28,17 @@ export const Page = defineDocumentType(() => ({
     description: {
       type: "string",
     },
+    locale: {
+      type: "string",
+      required: true,
+    }
   },
   computedFields,
 }))
 
 export const Post = defineDocumentType(() => ({
   name: "Post",
-  filePathPattern: `posts/**/*.mdx`,
+  filePathPattern: `*/posts/**/*.mdx`,
   contentType: "mdx",
   fields: {
     title: {
@@ -44,6 +52,10 @@ export const Post = defineDocumentType(() => ({
       type: "date",
       required: true,
     },
+    locale: {
+      type: "string",
+      required: true,
+    }
   },
   computedFields,
 }))
