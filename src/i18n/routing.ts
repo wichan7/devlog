@@ -1,4 +1,4 @@
 import { defineRouting } from "next-intl/routing"
-import locales from "./locales.json"
+import { defaultLocale, locales } from "./constant"
 
-export const routing = defineRouting(locales)
+export const routing = defineRouting({ locales, defaultLocale })
