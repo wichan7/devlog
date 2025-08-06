@@ -5,6 +5,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server"
 import { Analytics } from "@/components/analytics"
 import { LocaleSwitch } from "@/components/locale-switch"
 import { ModeToggle } from "@/components/mode-toggle"
+import { Select } from "@/components/select"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Link } from "@/i18n/navigation"
 import { routing } from "@/i18n/routing"
@@ -40,9 +41,10 @@ export default async function LocaleLayout({
                 <div className="flex items-center justify-between gap-2">
                   <ModeToggle />
                   <LocaleSwitch currentLocale={locale} />
-                  <nav className="ml-auto text-sm font-medium space-x-6">
+                  <nav className="flex ml-auto text-sm font-medium space-x-6">
                     <Link href="/">{t("menu.home")}</Link>
                     <Link href="/about">{t("menu.about")}</Link>
+                    <Select />
                   </nav>
                 </div>
               </header>

@@ -5,6 +5,7 @@
   },
   "menu": {
     "home": "Home",
-    "about": "About"
+    "about": "About",
+    "category": "Category"
   }
 }

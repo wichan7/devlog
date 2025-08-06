@@ -5,6 +5,7 @@
   },
   "menu": {
     "home": "ホーム",
-    "about": "紹介"
+    "about": "紹介",
+    "category": "カテゴリ"
   }
 }
