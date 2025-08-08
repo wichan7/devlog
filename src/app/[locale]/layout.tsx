@@ -1,11 +1,12 @@
+import { allPosts } from "contentlayer/generated"
 import { Inter } from "next/font/google"
 import { notFound } from "next/navigation"
 import { hasLocale, NextIntlClientProvider } from "next-intl"
 import { getTranslations, setRequestLocale } from "next-intl/server"
 import { Analytics } from "@/components/analytics"
+import { CategoryPopover } from "@/components/category-select"
 import { LocaleSwitch } from "@/components/locale-switch"
 import { ModeToggle } from "@/components/mode-toggle"
-import { Select } from "@/components/select"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Link } from "@/i18n/navigation"
 import { routing } from "@/i18n/routing"
@@ -29,6 +30,19 @@ export default async function LocaleLayout({
   setRequestLocale(locale)
   const t = await getTranslations()
 
+  const tagList = Object.entries(
+    allPosts
+      .filter((post) => post.locale === locale)
+      .flatMap((post) => post.tags)
+      .reduce(
+        (acc, tag) => {
+          acc[tag] = (acc[tag] || 0) + 1
+          return acc
+        },
+        {} as Record<string, number>,
+      ),
+  ).map(([name, count]) => ({ name, count }))
+
   return (
     <html lang={locale}>
       <body
@@ -44,7 +58,7 @@ export default async function LocaleLayout({
                   <nav className="flex ml-auto text-sm font-medium space-x-6">
                     <Link href="/">{t("menu.home")}</Link>
                     <Link href="/about">{t("menu.about")}</Link>
-                    <Select />
+                    <CategoryPopover tags={tagList} />
                   </nav>
                 </div>
               </header>
