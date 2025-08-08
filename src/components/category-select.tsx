@@ -1,8 +1,8 @@
 "use client"
 
 import { Popover, PopoverButton, PopoverPanel } from "@headlessui/react"
-import Link from "next/link"
 import { useTranslations } from "next-intl"
+import { Link } from "@/i18n/navigation"
 
 interface CategoryPopoverProps {
   tags: { name: string; count: number }[]
