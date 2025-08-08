@@ -1,6 +1,7 @@
 import { allPosts } from "contentlayer/generated"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
+import Giscus from "@/components/giscus"
 import { Mdx } from "@/components/mdx-components"
 
 interface PostProps {
@@ -60,6 +61,7 @@ export default async function PostPage({ params }: PostProps) {
       )}
       <hr className="my-4" />
       <Mdx code={post.body.code} />
+      <Giscus currentLocale={params.locale} />
     </article>
   )
 }
