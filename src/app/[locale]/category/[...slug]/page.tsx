@@ -1,5 +1,6 @@
 import { allPosts } from "contentlayer/generated"
-import Link from "next/link"
+import type { Metadata } from "next"
+import { Link } from "@/i18n/navigation"
 
 interface PageProps {
   params: {
@@ -8,9 +9,17 @@ interface PageProps {
   }
 }
 
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  return {
+    title: params.slug[0],
+  }
+}
+
 export default async function PagePage({ params }: PageProps) {
-  const categoryName = params?.slug?.[0]
-  const locale = params?.locale
+  const categoryName = params.slug[0]
+  const locale = params.locale
 
   return (
     <article className="py-6 prose dark:prose-invert">
