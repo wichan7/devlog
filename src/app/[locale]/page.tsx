@@ -1,7 +1,7 @@
 import { allPosts } from "contentlayer/generated"
-import Link from "next/link"
 import type { Metadata } from "next/types"
 import { getTranslations } from "next-intl/server"
+import Link from "next/link"
 
 interface HomeProps {
   params: {
