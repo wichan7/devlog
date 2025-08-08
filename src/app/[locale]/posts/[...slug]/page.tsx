@@ -1,8 +1,8 @@
 import { allPosts } from "contentlayer/generated"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
+import Giscus from "@/components/giscus"
 import { Mdx } from "@/components/mdx-components"
-import locales from "@/i18n/locales.json"
 
 interface PostProps {
   params: {
@@ -38,14 +38,10 @@ export async function generateMetadata({
 }
 
 export async function generateStaticParams(): Promise<PostProps["params"][]> {
-  return locales.locales.flatMap((locale) =>
-    allPosts
-      .filter((post) => post.locale === locale)
-      .map((post) => ({
-        slug: post.slugAsParams.split("/"),
-        locale,
-      })),
-  )
+  return allPosts.map((post) => ({
+    slug: post.slugAsParams.split("/"),
+    locale: post.locale,
+  }))
 }
 
 export default async function PostPage({ params }: PostProps) {
@@ -65,6 +61,7 @@ export default async function PostPage({ params }: PostProps) {
       )}
       <hr className="my-4" />
       <Mdx code={post.body.code} />
+      <Giscus currentLocale={params.locale} />
     </article>
   )
 }

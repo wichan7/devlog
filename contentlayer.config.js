@@ -28,10 +28,6 @@ export const Page = defineDocumentType(() => ({
     description: {
       type: "string",
     },
-    locale: {
-      type: "string",
-      required: true,
-    }
   },
   computedFields,
 }))
@@ -52,8 +48,9 @@ export const Post = defineDocumentType(() => ({
       type: "date",
       required: true,
     },
-    locale: {
-      type: "string",
+    tags: {
+      type: "list",
+      of: { type: "string" },
       required: true,
     }
   },
