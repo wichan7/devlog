@@ -1,0 +1,221 @@
+---
+title: 쿠버네티스 클러스터 '직접' 구성하기
+description: 눈물겨운 이야기
+date: 2023-04-21
+tags:
+  - MSA
+  - Kubernetes
+---
+
+# 프로비저닝
+## 프로비저닝이란..
+사용자의 요구에 맞게 시스템 자원을 할당, 배치, 배포해 두었다가 필요 시 시스템을 즉시 사용할 수 있는 상태로 미리 준비해 두는 것을 말한다.
+
+## 프로비저닝 방법 선택
+k8s를 프로비저닝하기 위한 유명한 방법으로 3가지가 있다. 
+1. kubernetes  
+여러 클러스터 구성 요소들을 직접 설치하고 설정한다.  
+1. kubeadm  
+k8s를 쉽게 구현할 수 있도록 도와주는 부트스트랩 툴이다.   
+k8s에서 공식적으로 지원하고, 업데이트하는 k8s 구현 툴이다.
+1. kops  
+kubeadm과 마찬가지로 쉽게 구현하기 위한 부트스트랩 툴이나, '클라우드 플랫폼' 에서 쉽게 k8s를 설치할 수 있도록 도와주는 도구이다.
+
+레퍼런스가 많고, 공식 홈페이지에서 소개하는 kubeadm을 사용하여 구성해보겠다.
+
+# 시작에 앞서..
+비록 주말에만 작업했었지만, 단순 세팅에서도 한달동안 정말 많은 삽질을 했다.  
+아래 소개하는 순서와 방법은 눈물로 쓰여졌다.  
+
+# AWS 인스턴스 구성
+## 인스턴스 스펙
+나는 아래와 같은 3개의 인스턴스를 생성했다.  
+Master, t3.xlarge, 20GiB EBS, redhat  
+Worker1, t3.medium, 20GiB EBS, redhat  
+Worker2, t3.medium, 20GiB EBS, redhat  
+  
+Master 노드는 가급적 t3.medium 이상을 추천한다. (kube-master 권장이 2cpu, 4GB 램이다.)  
+Worker는 무료 사용 가능한 t2.micro를 사용해도 상관은 없다.
+
+## 인스턴스 보안 그룹
+master inbound  
+
+|protocol|port|target|description|  
+|---|---|---|---|  
+|UDP|8285|172.31.48.0/20|Flannel|  
+|UDP|8472|172.31.48.0/20|Flannel|  
+|TCP|22|0.0.0.0/0|ssh|  
+|TCP|10252|172.31.48.0/20|kube-controller-manager (used by Self)|  
+|TCP|10250|172.31.48.0/20|Kubelet API (used by Self, Control plane)|  
+|TCP|6443|172.31.48.0/20|Kubernetes API Server (used by All)|  
+|TCP|10251|172.31.48.0/20|kube-scheduler (used by Self)|  
+|TCP|2379-2380|172.31.48.0/20|Etcd server client API (used by kube-apiserver, etcd)|  
+
+worker inbound  
+
+|protocol|port|target|description|  
+|---|---|---|---|  
+|UDP|8285|172.31.48.0/20|Flannel|  
+|UDP|8472|172.31.48.0/20|Flannel|  
+|TCP|22|0.0.0.0/0|ssh|  
+|TCP|30000 - 32767|0.0.0.0/0|NodePort Services (used by All)|  
+|TCP|10250|172.31.48.0/20|Kubelet API (used by Self, Control plane)|  
+
+NodePort, SSH를 제외한 모든 target cidr을 VPC 서브넷인 172.31.48.0/20 으로 변경했다.
+
+# yum 설정 및 기본 설치파일 다운로드
+마스터, 워커 노드에 같은 과정을 각각 반복한다.  
+
+## yum update
+``` sh
+sudo yum update -y
+```
+
+## 필수 설치파일 다운로드를 위한 yum repository 설정하기  
+docker, containerd 설치를 위해 repo를 설정한다.
+``` sh
+cd /etc/yum.repos.d  
+sudo wget https://download.docker.com/linux/centos/docker-ce.repo  
+```
+
+kubectl, kubeadm, kubelet 설치를 위해 repo를 설정한다. 
+``` sh
+cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+exclude=kube*
+EOF
+```
+
+## 필수 설치파일 설치
+docker-ce, containerd, kubeadm, kubectl, kubelet
+``` sh
+sudo yum install containerd.io  
+sudo yum install kubelet kubeadm kubectl --disableexcludes=kubernetes
+```
+
+# 리눅스 설정 변경
+## Selinux 설정을 permissive 모드로 변경  
+``` sh
+sudo setenforce 0
+sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+sudo systemctl enable --now kubelet
+```
+
+## Swap off  
+Linux 자체 Swap 기능을 사용하는 경우, 쿠버네티스의 자원 관리(포드 배치 등..)가 비정상적으로 동작한다.
+``` sh
+sudo swapoff -a  
+sudo sed -e '/swap/ s/^#*/#/' -i /etc/fstab
+```
+
+# Containerd 설정
+## containerd를 위한 module 로드
+``` sh
+cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
+overlay
+br_netfilter
+EOF
+
+sudo modprobe overlay
+sudo modprobe br_netfilter
+```  
+
+## containerd를 위한 sysctl 파라미터 설정  
+``` sh
+// 필요한 sysctl 파라미터를 설정하면 재부팅 후에도 유지된다.
+cat <<EOF | sudo tee /etc/sysctl.d/99-kubernetes-cri.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.ipv4.ip_forward                 = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+EOF
+
+// 재부팅하지 않고 sysctl 파라미터 적용
+sudo sysctl --system
+```
+
+## containerd config.toml cgroup 설정
+``` sh
+cd /etc/containerd/config.toml을 아래 내용으로 변경.
+
+version = 2
+[plugins]
+  [plugins."io.containerd.grpc.v1.cri"]
+   [plugins."io.containerd.grpc.v1.cri".containerd]
+      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
+        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+          runtime_type = "io.containerd.runc.v2"
+          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+            SystemdCgroup = true
+
+```
+
+## 재시작 시에도 containerd가 실행되도록 설정  
+``` sh
+sudo systemctl enable containerd
+sudo systemctl restart containerd
+```
+
+# 쿠버네티스 클러스터 구성
+## kubeadm init  
+이 작업은 마스터 노드에서만 진행한다.  
+
+CNI 설정에 따라 --pod-network-cidr을 변경해야 한다.  
+Flannel은 10.244.0.0/16  
+Calico는 192.168.0.0/16  
+우리는 Flannel을 설치할 것이다.
+``` sh
+sudo kubeadm init \
+    --apiserver-advertise-address={master private ip} \
+    --pod-network-cidr=10.244.0.0/16 \
+    --apiserver-cert-extra-sans={master private ip}
+```
+
+## kubectl 명령을 위한 써트 파일 생성
+이 작업은 마스터 노드에서만 진행한다.  
+``` sh
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+```
+
+## worker node join  
+이 작업은 워커 노드에서만 진행한다.  
+``` sh
+sudo kubeadm join {private ip}:6443 --token jle89r.6qqk9qlhx8wozd6p \
+        --discovery-token-ca-cert-hash sha256:e37231d3d866429b0caa85b2a9dce668b69d68e016f9981123782d20475131ab
+```
+
+## Flannel CNI 설치  
+이 작업은 마스터 노드에서만 진행한다.  
+``` sh
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+```
+
+## worker 노드에 scp로 config 파일 전달
+worker에서도 kubectl 명령을 사용할 수 있도록, 마스터에 있는 컨피그 파일을 전달한다.  
+``` sh
+scp /home/ec2-user/.kube/config 172.31.32.49:/home/ec2-user/.kube
+```
+
+# 에러 처리  
+## kubeadm init 시 cpu, 메모리 관련 문제가 있는 경우  
+kubeadm 최소 사양으로 cpu2, ram2GB가 필요한데 t3.micro는 해당 최소사양에 만족하지 않는다.  
+``` sh
+#아래 옵션으로 사양 관련을 무시할 수 있다.
+--ignore-preflight-erros=NumCPU,Mem
+```
+
+## kubeadm join 토큰, 써티 해시값 다시 얻기  
+``` sh
+kubeadm token list
+openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
+```
+
+성공  
+![structure](/images/k8s/0509_kubectl_get_pods.png)

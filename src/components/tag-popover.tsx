@@ -26,7 +26,7 @@ export function TagPopover({ tags }: TagPopoverProps) {
               key={tag.name}
               href={`/tags/${tag.name}`}
             >
-              <div className="flex-grow overflow-hidden text-ellipsis">
+              <div className="flex-grow overflow-hidden text-ellipsis whitespace-nowrap">
                 {tag.name}
               </div>
               <div className="flex-none">({tag.count})</div>

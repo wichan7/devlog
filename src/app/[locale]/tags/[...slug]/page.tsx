@@ -22,12 +22,13 @@ export default async function PagePage({ params }: PageProps) {
   const locale = params.locale
 
   return (
-    <article className="py-6 prose dark:prose-invert">
+    <article className="py-6 prose max-w-none dark:prose-invert">
       <h1>Posts Tagged &quot;{tagName}&quot;</h1>
       <hr />
       {allPosts
         .filter((post) => post.locale === locale)
         .filter((post) => post.tags.includes(tagName))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .map((post) => (
           <article key={post._id}>
             <Link href={post.slug}>
