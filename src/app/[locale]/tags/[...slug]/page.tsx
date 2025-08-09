@@ -18,16 +18,16 @@ export async function generateMetadata({
 }
 
 export default async function PagePage({ params }: PageProps) {
-  const categoryName = params.slug[0]
+  const tagName = params.slug[0]
   const locale = params.locale
 
   return (
     <article className="py-6 prose dark:prose-invert">
-      <h1>{categoryName}</h1>
+      <h1>Posts Tagged "{tagName}"</h1>
       <hr />
       {allPosts
         .filter((post) => post.locale === locale)
-        .filter((post) => post.tags.includes(categoryName))
+        .filter((post) => post.tags.includes(tagName))
         .map((post) => (
           <article key={post._id}>
             <Link href={post.slug}>
