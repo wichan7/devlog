@@ -23,7 +23,7 @@ export default async function PagePage({ params }: PageProps) {
 
   return (
     <article className="py-6 prose dark:prose-invert">
-      <h1>Posts Tagged "{tagName}"</h1>
+      <h1>Posts Tagged &quot;{tagName}&quot;</h1>
       <hr />
       {allPosts
         .filter((post) => post.locale === locale)
