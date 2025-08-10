@@ -1,0 +1,86 @@
+---
+title: JavaScript, Amazing Uses of Backticks
+description: What else is there besides template literals?
+date: 2023-11-20
+tags:
+  - javascript
+---
+
+## Backtick
+
+This thing on the tilde key of a Windows keyboard. **`** is a backtick.
+Besides template literals, backticks also have the function of calling functions. (ㄷㄷ!)
+
+## Template Literal
+
+```javascript showLineNumbers
+const name = "wichan";
+const str = `hello ${name}!`;
+
+// result: hello wichan!
+console.log(str);
+```
+
+This is called a Template Literal.
+
+## Tagged Template
+
+Anyway, I posted this because of [Tagged Template](https://tc39wiki.calculist.org/es6/template-strings/).
+
+```javascript showLineNumbers
+function fun(arg) {
+  console.log(arg);
+}
+
+// result: funny javascript
+fun("funny javascript");
+// result: [ 'funny javascript' ]
+fun`funny javascript`;
+```
+
+I successfully called a function with a backtick. But why did arg come as an array?
+
+### This is when you use it.
+
+Actually, when calling a function with a backtick, there are more arguments passed.
+Look at the following example.
+
+```javascript showLineNumbers
+const name = "wichan";
+const age = 25;
+
+function intro(strings, ...values) {
+  console.log(strings);
+  console.log(values);
+}
+
+/** result:
+ *   strings: ['my name is ', ' and i am ', ' years old.']
+ *   values: ['wichan', 25]
+ */
+intro`my name is ${name} and i am ${age} years old.`;
+```
+
+When calling a function with a backtick, the first argument is the template as a limited string array, and after that, template values are provided as arguments.
+When inputting strings to a function, it can be used to separate template variables and strings.
+
+### There's one more hidden feature.
+
+Actually, tagged templates have one more hidden feature.
+
+```javascript showLineNumbers
+function fun(strings) {
+  console.log(strings);
+  console.log(strings.raw);
+}
+
+/** result:
+ * [ 'directory: C:System32etc...' ]
+ * [ 'directory: C:\\System32\\etc...' ]
+ */
+fun`directory: C:\System32\etc...`;
+```
+
+It shows the original string without escaping.
+
+The end

@@ -1,0 +1,112 @@
+---
+title: 優先度付きキューを実装する（Feat. Heap）
+description: JavaScriptになぜ優先度付きキューSTLがないのですか？
+date: 2023-10-05
+tags:
+  - Algorithm
+  - Javascript
+---
+
+## 優先度付きキューとは何か？
+> 優先度付きキュー（Priority Queue）は、優先度が高いデータが先に出ていく形式のデータ構造である。
+要素がキューに今入ってきたとしても、優先度が最も高ければ最も先に出ることができる。
+
+## どのように実装するか？
+小さい数字がより高い優先度を持つと仮定しよう。どのように実装できるだろうか？
+
+### 直感的な方法
+直感的に考えてみると、まず入れてから配列内のすべての要素を順次処理する方法がある。
+``` javascript showLineNumbers
+class PQ {
+    constructor() {
+        this.queue = [];
+    }
+
+    push = (e) => this.queue.push(e); 
+
+    pop = () => {
+        if (this.queue.length === 0) return;
+
+        let min = Infinity;
+        for (let elem of this.queue) {
+            if (elem < min) min = elem;
+        }
+        return min;
+    }
+}
+```
+直感的な方法で要件を実装した。
+
+> この時、push関数の時間複雑度がO(1)
+pop関数の時間複雑度がO(N)であることは明らかである。
+
+### ヒープデータ構造を使用する方法
+**ヒープ**は親ノードが子ノードより常に小さい`完全二分木`である。
+参考に、完全二分木は上側、左側にノードが埋まっている木データ構造である。
+`完全二分木`
+![structure](/images/algorithm/heap/complete.png)
+
+`完全二分木`
+![structure](/images/algorithm/heap/perfect.png)
+
+完全二分木と完全二分木は異なるもので、完全二分木はノードがぎっしり詰まっている。
+
+閑話休題、ヒープの'親ノードが子ノードより常に小さい特徴'を利用して優先度付きキューを作ることができる。
+キューpush操作時に常にヒープの構造を満たすように挿入し、
+キューpop操作時にヒープのルートノードをpopすれば優先度付きキューになる。
+
+#### 実装
+``` javascript showLineNumbers
+class PQ {
+    constructor() {
+        this.heap = [null];
+    }
+
+    _swap = (a, b) => [this.heap[a], this.heap[b]] = [this.heap[b], this.heap[a]];
+
+    size = () => this.heap.length - 1;
+
+    peek = () => this.heap[1] !== undefined ? this.heap[1] : null;
+
+    push = (value) => {
+        this.heap.push(value);
+        let curIdx = this.heap.length - 1;
+        let parIdx = (curIdx / 2) >> 0;
+
+        while (curIdx > 1 && this.heap[curIdx] < this.heap[parIdx]) {
+            this._swap(parIdx, curIdx)
+            curIdx = parIdx;
+            parIdx = (curIdx / 2) >> 0;
+        }
+    }
+
+    pop = () => {
+        const min = this.heap[1];
+        if (this.heap.length <= 2) this.heap = [null];
+        else this.heap[1] = this.heap.pop();
+
+        let curIdx = 1;
+        let leftIdx = curIdx * 2;
+        let rightIdx = curIdx * 2 + 1;
+
+        while (this.heap[leftIdx] < this.heap[curIdx] || this.heap[rightIdx] < this.heap[curIdx]) {
+            const minIdx = this.heap[leftIdx] > this.heap[rightIdx] ? rightIdx : leftIdx;
+            this._swap(minIdx, curIdx);
+            curIdx = minIdx;
+            leftIdx = curIdx * 2;
+            rightIdx = curIdx * 2 + 1;
+        }
+
+        return min;
+    }
+}
+```
+
+> この時、push関数の時間複雑度がO(logN)
+pop関数の時間複雑度がO(logN)であることが分かる。
+
+## まとめ
+基本的なJavaScriptにはヒープやSTLのpriority_queueが提供されないため、直接実装しなければならない。
+これだけではなく、combination、permutation、queue...などを直接実装してきた。
+
+コーディングテスト受験中にこれをいつ実装しているのだろうか...

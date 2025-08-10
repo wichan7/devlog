@@ -1,0 +1,117 @@
+---
+title: SDC 2023 - Refactoring Day
+description: I attended Samsung Developer Conference
+date: 2023-11-18
+tags:
+  - Outdoor
+---
+
+## Overview
+This document introduces **Refactoring Day**, one of the SDC2023 sessions held from 2023.11.14 to 11.15.
+
+## GPT 3-line Summary
+> 1. **Refactoring Day** introduced at the 2023 SDC session shares the experience of the Samsung Account team 
+embarking on source code refactoring to resolve technical debt.
+>
+> 2. Although the initial attempt failed, refactoring day held on Thursdays and 
+improvement in code quality metrics led to reduced deployment frequency and balanced growth within the team.
+>
+> 3. Through this, individuals realized the importance of refactoring, and 
+the team understood the importance of considering human characteristics for efficient work processing.
+
+## The Need for Refactoring
+The Samsung Account team has been continuously working to resolve technical debt.
+Until last year, they only improved infrastructure technical debt, so source code debt continued to accumulate.
+
+The source code debt grew so much that to modify just **3 lines** of source code, side effects broke out everywhere... It took a whopping **2 weeks** to understand the impact and make the modifications.
+
+Presenter Lim Min-seung decided to conduct 'Refactoring' Day based on these cases.
+
+## What is Refactoring Day?
+Refactoring Day is a day when all members participate and immerse themselves in refactoring work for the entire day.
+
+Samsung Account was a large-scale system with over 300,000 lines, and with 8 PR requests per day, it was impossible to achieve refactoring through individual efforts alone, so this decision was made.
+
+## Trial and Error
+Initially, the account team defined 'Refactoring Day' as follows:
+
+> Every Friday 09:00 ~ 18:00  
+> 1. Goal setting through morning meeting
+> 2. Refactoring
+> 3. Face-to-face peer and pair review
+> 4. Sharing progress and reflection through afternoon meeting
+
+However, the first Refactoring Day failed. The reasons were:
+
+1. Due to the nature of Fridays, members couldn't participate well in refactoring due to flexible work hours, vacations, etc.
+
+2. Due to lack of motivation for refactoring, members couldn't participate actively.
+
+Based on these trials and errors, the Samsung account team supplements Refactoring Day as follows:
+
+## Improvements
+
+### 1. Change Refactoring 'Day'
+Change Refactoring Day from every Friday to 'Thursday'.
+
+### 2. Quantify Refactoring Level
+Quantify using the 'Analysishub' tool that statically analyzes source code levels.
+(Seems to be an internal Samsung analysis tool, similar open-source tools include sonarQube, source monitor, etc.)
+
+The items quantified are as follows:
+
+| name | description |
+| --- | --- |
+| Cyclomatic Complexity | Is the cyclomatic complexity low? |
+| Duplicate Code | Is there little duplicate code? |
+| God Module | Are there few modules that function like 'gods' with omniscient and omnipotent capabilities? |
+| Coupling Between Objects | Is decoupling between objects well done? |
+| Dependency Complexity | Are there few dependencies? |
+| Lines Of Code | Are there few lines in a single source file? |
+| Module Circular Dependency | Are there few circular reference (mutually dependent) modules? |
+
+The account team believed that if they improved CC, LOC, and DC among these, the remaining indicators would follow,
+so they selected improving CC, LOC, and DC as their refactoring goals.
+
+### 3. Numerical Notifications Using PR Review Bot
+When a pull request is made, the Review Bot is triggered and provides analysis indicators like CC, LOC, DC for that request as comments.
+This became the driving force that made members treat refactoring like a game, igniting competitive spirit.
+
+## Results
+Reflecting these work process improvements in Refactoring Day and conducting it from January to September resulted in:
+
+### 1. CC, DC, LOC Metric Improvements
+CC     0.79 → 4.78  
+DC     3.01 → 4.01  
+LOC   0.92 → 4.03  
+
+Compared to 2022, various metrics like CC, DC, and LOC improved in 2023.
+What effects did these metric improvements bring?
+
+### 2. Sharp Decrease in Deployment Frequency
+2021: 23 times
+2022: 24 times (+4%)
+**2023: 15 times (-38%)**
+
+Deployment accompanies tiring work and requires a lot of ~~mental~~ and human resources for preparation and monitoring.
+Through the refactoring process, deployment frequency decreased by about 38% compared to 2022, and they said it was good to be able to focus more on development with the saved time.
+
+### 3. Balanced Growth of Members
+Commit to Code Review ratio improves compared to 2022.
+They transitioned from commit-focused development to development where they think together and grow.
+
+![sdc-git](/images/sdc2023/sdc-git.png)
+
+Communication about services between team members strengthened, and naturally, writing duplicate code also decreased.
+
+## Personal Review
+I had heard that refactoring was important, but it didn't directly resonate with me, who had only developed small services alone or with two or three people.
+However, the introduction based on cases presented at SDC convinced me of the importance of refactoring.
+
+Although it's not about refactoring, what impressed me was the importance of considering human characteristics when proceeding with any work.
+Things like days when people can focus and motivation for work - since work is done by people, we should proceed with work efficiently by focusing on 'people'.
+
+## Footnotes
+Presenter 'Lim Min-seung'  
+![sdc-2](/images/sdc2023/sdc-2.jpg)  
+![sdc-1](/images/sdc2023/sdc-1.jpg)

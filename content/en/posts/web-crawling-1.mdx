@@ -1,0 +1,67 @@
+---
+title: Creating Puppeteer Web Crawler - 1
+description: Have you heard of Puppeteer before?
+date: 2023-09-14
+tags:
+  - Web
+  - Crawling
+---
+
+## What is a web crawler?
+> A web crawler is a computer program that systematically and automatically explores the World Wide Web.  
+>
+> The work that web crawlers do is called **web crawling** or **spidering**. Many sites like search engines perform web crawling to maintain the latest state of data. Web crawlers are typically used to create copies of all pages of visited sites, and search engines index these generated pages for faster searching. Additionally, crawlers are also used for automatic maintenance tasks of websites such as link checking or HTML code validation, and for collecting specific types of information from web pages such as automatic email collection.  
+>
+> Web crawlers are a form of bots or software agents. Web crawlers **usually start from a list of URLs called seeds**, and **recognize all hyperlinks on pages to update the URL list**. The updated URL list is recursively visited again.  
+>
+> ...[wikipedia](https://ko.wikipedia.org/wiki/%EC%9B%B9_%ED%81%AC%EB%A1%A4%EB%9F%AC) excerpt...
+
+The important point in the definition of web crawlers is that it's not a narrow task of simply parsing and extracting data from a single URL endpoint.  
+You must **recognize hyperlinks to update the URL list**, extract data according to your purpose, index hyperlinks, and wander around the web.  
+
+## How can we create one?
+With languages that can handle HTTP communication like Java's HttpConnection module, C#'s HttpWebRequest class, NodeJS's http module, etc., you could create a simple crawler.  
+
+However, if you build with native code, you'll have many implementation elements to consider depending on your purpose, such as browser JavaScript runtime considerations and implementing necessary browser functionalities.  
+
+To avoid worrying about these basic implementations, there's a method of implementing crawling by controlling the browser.  
+
+## Understanding Chromium
+Chromium is the name of an open-source web browser, and the well-known 'Chrome' is built on top of 'Chromium'.  
+Not only Chrome, but also Samsung Internet Browser, Naver Whale, Microsoft Edge, etc. are developed based on Chromium.  
+
+Well-known Selenium and the relatively recent **Puppeteer** support Chromium control, and in this post, we'll use Puppeteer.  
+
+## Installing Puppeteer
+``` sh showLineNumbers
+npm init
+npm i puppeteer
+```
+
+## Let's run Puppeteer
+Create app.js in your project folder and paste the source code below.  
+``` javascript showLineNumbers
+// app.js
+const puppeteer = require('puppeteer')
+
+(async () => {
+    const links = ["https://naver.com", "https://google.com", "https://daum.net"]
+
+    const browser = await puppeteer.launch({ headless: false })
+    for (let link of links) {
+        const page = await browser.newPage()
+        await page.goto(link)
+        console.log(page.content())
+    }
+
+    await browser.close()
+})()
+```
+
+Puppeteer is a JavaScript library that supports controlling Chromium browsers.  
+This library is configured to be non-blocking with asynchronous processing according to JavaScript philosophy. (You can make it synchronous with await or callback functions if needed.)  
+
+As you can feel from the source code, you can open a browser with `puppeteer.launch()` and create an empty page with `browser.newPage()`.  
+You can also get the page's HTML and other content as a string with `page.content()`.  
+
+In the next post, let's parse pages with the Cheerio library and extract the information we want.

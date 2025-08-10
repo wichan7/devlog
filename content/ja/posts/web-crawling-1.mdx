@@ -1,0 +1,67 @@
+---
+title: Puppeteerウェブクローラー作成 - 1
+description: Puppeteerは初めて聞きますか？
+date: 2023-09-14
+tags:
+  - Web
+  - Crawling
+---
+
+## ウェブクローラーとは何でしょうか？
+> ウェブクローラー（web crawler）は、組織的、自動化された方法でワールドワイドウェブを探索するコンピュータプログラムである。  
+>
+> ウェブクローラーが行う作業を**ウェブクローリング**（web crawling）または**スパイダリング**（spidering）と呼ぶ。検索エンジンのような複数のサイトでは、データの最新状態維持のためにウェブクローリングを行う。ウェブクローラーは通常、訪問したサイトのすべてのページのコピーを作成するために使用され、検索エンジンはこのように生成されたページをより速い検索のためにインデックス化する。また、クローラーはリンクチェックやHTMLコード検証のようなウェブサイトの自動維持管理作業のために使用されることもあり、自動メール収集のようなウェブページの特定の形態の情報を収集するためにも使用される。  
+>
+> ウェブクローラーはボットやソフトウェアエージェントの一形態である。ウェブクローラーは**通常シード（seeds）と呼ばれるURLリストから開始**し、ページのすべての**ハイパーリンクを認識してURLリストを更新**する。更新されたURLリストは再帰的に再び訪問される。  
+>
+> ...[wikipedia](https://ko.wikipedia.org/wiki/%EC%9B%B9_%ED%81%AC%EB%A1%A4%EB%9F%AC) から抜粋...
+
+ウェブクローラーの定義で重要な点は、単純に1つのURLエンドポイントからデータをパースして抽出する、狭い作業ではないということである。  
+**ハイパーリンクを認識してURLリストを更新**し、これを目的に応じてデータを抽出し、ハイパーリンクをインデックス化しながらウェブを彷徨わなければならない。  
+
+## どのように作成できるでしょうか？
+JavaのHttpConnectionモジュール、C#のHttpWebRequestクラス、NodeJSのhttpモジュールなど、http通信ハンドリングが可能な言語であれば、簡単なクローラーを作成できるであろう。  
+
+しかし、ネイティブコードで積み上げていくと、ブラウザのJavaScriptランタイムに対する考慮、必要なブラウザの機能実装など、目的に応じて様々な実装要素が多くなってしまうであろう。  
+
+このような基礎実装を気にしないために、ブラウザを制御してクローリングを実装する方法がある。  
+
+## クロミウムを知ろう
+クロミウムはオープンソースウェブブラウザの名前であり、誰もがよく知っている「クロム」は「クロミウム」を基盤として作られた。  
+クロムだけでなく、サムスンインターネットブラウザ、ネイバーウェール、マイクロソフトエッジなどがクロミウムベースで開発された。  
+
+よく知られているSeleniumと比較的最近出た**Puppeteer**などがクロミウム制御をサポートしており、本ポスティングではPuppeteerを使用してみる。  
+
+## Puppeteerインストール
+``` sh showLineNumbers
+npm init
+npm i puppeteer
+```
+
+## Puppeteerを実行してみよう
+プロジェクトフォルダにapp.jsを作成し、以下のソースコードを貼り付けてみよう。  
+``` javascript showLineNumbers
+// app.js
+const puppeteer = require('puppeteer')
+
+(async () => {
+    const links = ["https://naver.com", "https://google.com", "https://daum.net"]
+
+    const browser = await puppeteer.launch({ headless: false })
+    for (let link of links) {
+        const page = await browser.newPage()
+        await page.goto(link)
+        console.log(page.content())
+    }
+
+    await browser.close()
+})()
+```
+
+puppeteerはクロミウムブラウザ制御をサポートするJavaScriptライブラリである。  
+このライブラリはJavaScript思想に合わせて、非同期処理されるように構成されており、non-blockingに構成可能である。（必要な場合はawaitやcallback functionで同期処理もできる。）  
+
+ソースコードから感じられるように、`puppeteer.launch()`でブラウザを開き、`browser.newPage()`で空のページを作成できる。  
+`page.content()`でpageのHTMLなどコンテンツを文字列として返り値として受け取ることもできる。  
+
+次のポスティングでは、Cheerioライブラリと一緒にpageをパースして、欲しい情報を得てみよう。

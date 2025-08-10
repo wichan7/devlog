@@ -1,0 +1,44 @@
+---
+title: Is JWT Good?
+description: JWT is bad
+date: 2025-03-30
+tags:
+  - Web
+---
+
+To get straight to the point, I think it can only be useful in limited business requirements.
+
+## Overview
+I haven't done many projects, but empirically, it seems like many recent web services use JWT for authentication processing.
+Since it's a hot technology, I studied it and applied it to projects, but the more I learned, the more I realized it's only useful in limited cases. I wanted to clearly point out that especially juniors (people like me..) seem to use it without properly understanding the pros/cons of the technology.
+
+## In scalable infrastructure...
+
+### JWT's biggest advantage lies in its statelessness.
+JWT can verify the validity of authentication information with just the `encryption key` for signing tokens.
+In the case of sessions, due to their characteristics, session keys must be stored in memory or external databases, so there's a problem where authentication depends on specific servers that have session keys (stateful).
+
+Why is being stateful a problem? In `multiplicated application` environments, all applications must look at the same data, so a problem arises where session keys must be managed on some centralized server.
+JWT can verify validity with just an encryption key, so it can be free from such problems.
+
+### Then isn't it good?
+You might think, "Then isn't it happy?" but the problem arises from business requirements.
+It's common to have business requirements to ban malicious users (e.g., hackers, spam users...) during service operation. (Isn't that right?)
+
+To implement this requirement, you typically have AccessToken and RefreshToken, store the RefreshToken somewhere (in-memory, RDB, etc.), and then retrieve and invalidate it when needed.
+When a 'store and retrieve' process occurs during authentication, your authentication process has now become Stateful.
+
+In this case, you need a centralized cache server, just like the session described above.
+
+### Of course, there are differences from sessions.
+In authentication implemented with Access+Refresh combination, since AccessToken is not stored anywhere, there's an advantage that you don't need network I/O to external caching servers while the AccessToken is valid.
+In this case, authentication with Access + Refresh combination seems more likely to have lower costs compared to sessions that require network I/O every time.
+
+## In monolithic infrastructure...
+
+### Why do you need statelessness?
+In monolithic applications that don't consider multiplication, there's no need to have statelessness. (After all, you'll only receive requests on one server..)
+In this case, if you have enough memory, the session method of storing session keys in memory and retrieving them in O(1) will be cheaper than JWT, which has decoding and verification processes.
+
+## Conclusion
+Don't just chase trends, but become a developer who can `choose` by properly considering the pros/cons of business and technology.

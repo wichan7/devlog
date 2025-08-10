@@ -1,0 +1,92 @@
+---
+title: クubernetes - DeploymentとService
+description: 新しい概念が来ました
+date: 2023-05-09
+tags:
+  - MSA
+  - Kubernetes
+---
+# DeploymentでPodをデプロイする
+DeploymentでPodを作成し、そのPodのimage、env、portなどの仕様を定義できます。  
+また、Replica数を定義してHAのためのPodの数を管理できます。  
+作ってみましょう。  
+
+## deployment作成
+``` yaml
+vi nginx-deploy.yaml
+
+apiVersion: apps/v1
+kind: Deployment      # deployment > replicaset > pod
+metadata:
+  name: nginx-deployment       # deploymentの名前
+  labels:
+    app: nginx                 # リソースにラベルを付けることができます
+spec:                 # deploymentの仕様を定義
+  replicas: 3         # 3つのレプリカPodを作成
+  selector:           # デプロイメントが管理するPodを見つける方法
+    matchLabels:      # app=nginxラベルを持つPodを選択
+      app: nginx
+  template:                    # 作成されるPodのmeta、specを定義
+    metadata:
+      labels:
+        app: nginx             # Podにapp=nginxラベルを付ける
+    spec:
+      containers:              # コンテナを1つ作成
+      - name: nginx            # nameフィールドの値nginx
+        image: nginx:latest    # 最新のnginxイメージを使用
+        ports:
+        - containerPort: 80    # コンテナポートを指定
+```
+## クラスターにdeploymentを適用
+クラスターにそのdeployを適用します。  
+``` sh
+kubectl apply -f nginx-deploy.yaml
+```
+
+## pod、deploy作成確認
+deployが作成され、deployで定義した仕様に従って3つのPodが作成されているはずです。  
+``` sh
+kubectl get pods -A  
+kubectl get deploy -A  
+```
+
+# Serviceでサービスにアクセス可能にする
+Podだけを作成した場合、そのノードのlocalからアクセス可能な状態が完成しています。  
+外部からアクセス可能にするために、ServiceでそのPodたちをまとめることができます。  
+前章で30000~32767ポートをNodePort Serviceで0.0.0.0/0 Inboundポートを許可しましたが、今それを活用します。  
+
+## service作成
+``` yaml
+vi nginx-service.yaml
+
+apiVersion: v1
+kind: Service         # Service定義
+metadata:                      # そのServiceのmetadata設定
+  name: mynginxservice         # サービス名mynginxservice
+spec:
+  type: NodePort      # ClusterIP、LoadBalancer、NodePortがあります（後でIngressも扱う予定）
+  ports:
+  - port: 8080        # pod ip:port
+    targetPort: 80    # app ip:targetPort
+    protocol: TCP     # 
+    name: http        # 
+  selector:
+    app: nginx        # nginx Podたちをserviceでまとめる
+```
+
+## apply
+``` sh
+kubectl apply -f nginx-service.yaml
+```
+
+## service作成確認
+``` sh
+kubectl get service -A
+```
+
+## 実際にnginx serviceにアクセスしてみる  
+上記のyaml通りにapplyした場合、NodePortポートは30000~32767の間のランダムな数が設定されているはずです。  
+service作成コマンドでportを確認し、どのWorkerノードからでも`{worker public ip}:{node port}`でアクセスするとnginxサービスが呼び出されるはずです。   
+
+Podがどこに作成されているかも分からず、このようにするとそのNodeにあるPodだけが呼び出されるのではないか？と思いました。  
+これはCoreDNSというクubernetesの機能が、Serviceを呼び出すとCoreDNS機能が自動的にバランシングして各ノードのPodを自動的に呼び出してくれるということです。

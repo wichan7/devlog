@@ -1,0 +1,34 @@
+---
+title: MSA設計と実装 - 01
+description: これから進めるMSAプロジェクトを設計してみた
+date: 2023-05-13
+tags:
+  - Architecture
+  - Kubernetes
+  - Docker
+  - MSA
+---
+# システム構成
+私が目標とするシステム構成図を描いてみた。
+
+## k8s構成図
+![structure](/images/k8s/0513_k8s-archi1.png)
+
+総3つのノードで構成され、実際のappが動作する場所はworker 2台である。
+app、apiの構成は明確だが、DBサーバー構成が不明確だった。その理由は、statelessサービスを提供することに特化したk8sにstatefulである必要があるDBサーバーを載せるのが適切か？という考えだった。
+
+したがって、k8s障害復旧やスケジューリングを適用されないようにtaintを設定し、mongoが提供するreplica機能を利用してバックアップとHA構成にする予定である。
+
+## 流入に基づく構成
+![structure](/images/k8s/0513_k8s-archi2.png)
+
+ユーザーはnginx-ingressによって/app、/apiのパスにingressされ、app、apiはそれぞれ2つのreplicaが作成されてHA構成になる予定である。
+この時、特異な点はappと表現されたWASがDB照会やビジネスロジック処理時に、常にapiサーバーにリクエストするということである。
+このような構成は、3rd party appへのapi提供が可能になり、今後new-appが生まれても既存のold-appに依存しない拡張性のある構成を助けるだろう。
+
+# これからすること
+1. k8sの勉強を並行しながらexpressでapp、apiサーバーを実装する。
+2. mongo replicationの概念と実装を明確にしよう。
+
+appendix.
+機会があればappを開発しながらreactのようなフロントライブラリも適用してみたい。

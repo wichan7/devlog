@@ -1,0 +1,213 @@
+---
+title: GraphQLサーバーを構成してみる
+description: 名前はかっこいいけど？
+date: 2023-10-23
+tags:
+  - Web
+  - GraphQL
+  - NoSQL
+---
+
+## GraphQLとは何か
+> GraphQL is a query language for APIs and a runtime for fulfilling those queries with your existing data.  
+...  
+GraphQL gives clients the power to ask for exactly `what they need and nothing more`, makes it easier to evolve APIs over time, and enables powerful developer tools.
+
+公式文書の表現を見ると、必要なデータのみを正確に応答するQuery Languageだと言っている。  
+ClientはGraphQLを作成してGraphQLサーバーと通信し、データを取得できる。
+
+## RESTの問題点
+RESTfulなリクエストは通常以下のように実行される。  
+`GET https://example.com/users`  
+
+この時の応答は以下のように予想できる。  
+``` json showLineNumbers
+{
+    "count": 3,
+    "users": [
+        {
+            "id": 1,
+            "firstName": "gildong",
+            "lastName": "hong",
+            "age": 25,
+            "address": "ソウル市江南区駅三洞"
+        }, {
+            "id": 2,
+            "firstName": "chulsoo",
+            "lastName": "kim",
+            "age": 23,
+            "address": "京畿道南楊州市別内洞"
+        }, {
+            "id": 3,
+            "firstName": "wichan",
+            "lastName": "kang",
+            "age": 24,
+            "address": "ソウル市中浪区新内洞"
+        }
+    ]
+}
+```
+
+私が人々の住所が必要で`/users`をリクエストするなら、住所を取得できるが、必要のない名前、年齢、住所などのデータも一緒に受け取ることになる。  
+このような現象を`Over Fetching`と呼ぶ。  
+
+二番目に、住所と一緒に人々のプロフィール写真が必要で`/user/:id/profile`を呼び出すと仮定しよう。  
+私たちは住所と人々のプロフィール画像を取得するために、`/users`を呼び出した後、usersの数だけ`/user/:id/profile`を繰り返し呼び出さなければならない。  
+このように一度のRequestで欲しいデータをすべて取得できない場合、`Under Fetching`と呼ぶ。  
+
+## GraphQLのソリューション
+GraphQLはOver/Under fetchingを解決するために、一つの統合されたインターフェースを提供する。  
+まるでRDB interfaceでSelect文を作成するように、GraphQLに合ったQueryを送信するだけでよい。  
+
+## GraphQLのRequest
+GraphQLの構造は以下のようである。  
+``` graphql showLineNumbers
+{
+    users {
+        id
+        address
+        profile
+    }
+}
+```
+
+このようにGraphQLサーバーにPostリクエストを送信すると、GraphQLサーバーがクエリをパースし、適切な動作を実行する。  
+
+私たちはGQLサーバーが自動的に実行する適切な動作の間にソースコードを作成し、データを読み込み、結合するなど、欲しいようにデータを扱うことができるようになる。  
+
+Dataに対するStructure及びDocumentationも素晴らしく作成が可能である。
+
+## 実装に先立って
+GraphQLは仕様に過ぎないので、誰かが作った実装体を持ってきて活用できる。  
+該当記事ではApollo Serverと呼ばれるGraphQL実装体を通じて実装した。  
+
+目標はGraphQLの理解なので、実際のDatabaseを接続するのではなく、メモリ上でのみデータが維持される。  
+
+## Apollo Serverパッケージインストール
+``` shell showLineNumbers
+npm install apollo-server
+```
+
+## server.js
+``` javascript showLineNumbers
+import { ApolloServer, gql } from "apollo-server";
+import { db } from "./database.js";
+
+let {tweets, users} = db;
+const typeDefs = gql`
+    """
+    ユーザー情報を表します。
+    """
+    type User {
+        id: ID!
+        firstName: String!
+        lastName: String!
+        fullName: String!
+    }
+
+    """
+    投稿を表します。
+    """
+    type Tweet {
+        id: ID!
+        text: String!
+        author: User
+    }
+    
+    type Query {
+        """
+        すべてのツイートを取得します。
+        """
+        allTweets: [Tweet!]!
+
+        """
+        指定した:idのツイートを取得します。
+        """
+        tweet(id: ID!): Tweet
+        
+        """
+        すべてのユーザーの情報を取得します。
+        """
+        allUsers: [User!]!
+    }
+    type Mutation {
+        postTweet(text: String!, userId: ID!): Tweet
+        deleteTweet(id: ID!): Boolean
+    }
+`;
+
+const resolvers = {
+    Query: {
+        allTweets: () => tweets,
+        tweet: (_, {id}) => tweets.find(t => t.id === id),
+        allUsers: () => users
+    },
+    Mutation: {
+        postTweet(_, {text, userId}) {
+            const newTweet = {
+                id: tweets.length + 1,
+                text,
+            };
+            tweets.push(newTweet);
+            return newTweet;
+        },
+        deleteTweet(_, {id}) {
+            const tweet = tweets.find(tweet => tweet.id === id);
+            if (!tweet) return false;
+            tweets = tweets.filter( t => t.id !== tweet.id );
+            return true;
+        }
+    },
+    User: {
+        fullName: ({firstName, lastName}) => firstName + " " + lastName
+    },
+    Tweet: {
+        author({userId}) {
+            return users.find(u => u.id === userId)
+        }
+    }
+}
+
+const server = new ApolloServer({typeDefs, resolvers});
+
+server.listen().then(({url}) => {
+    console.log(`Running on ${url}`);
+})
+```
+
+## database.js
+``` javascript showLineNumbers
+const tweets = [{
+    id: "1",
+    text: "my first tweet",
+    userId: "2"
+}, {
+    id: "2",
+    text: "second tweet",
+    userId: "1"
+}];
+
+const users = [{
+    id: "1",
+    firstName: "gildong",
+    lastName: "hong"
+}, {
+    id: "2",
+    firstName: "chulsoo",
+    lastName: "kim"
+}];
+
+export const db = {
+    tweets, users
+};
+```
+
+アポロを利用したGraphQLサーバーを実行するには、typeDefとresolverが必須的な引数である。  
+
+typeDefはMongooseのように、事前にデータのタイプを定義する項目である。  
+Queryの場合は照会に対する仕様で、Mutationの場合は文字通りデータの状態が変更される可能性がある場合に対する仕様である。  
+
+resolverは実際にデータ処理するロジックに対する作成部である。  
+例で見るようにresolverにdefをoverrideする場合、該当データに対する処理を中間でハンドリングできる。  
+
+実際にQueryに少し慣れると、本当に簡単に欲しいデータを取得できる。

@@ -1,0 +1,113 @@
+---
+title: Redis-Sentinel導入記
+description: Standaloneで運営中だったレディスを新規クラスターに移行してみよう
+date: 2025-02-26
+tags:
+  - Kubernetes
+  - Redis
+  - Spring
+---
+
+私たちはAzureの管理型クubernetesでサービスを提供している。  
+メモリを大量に消費するJVMベースのアプリケーションを中心に動かしていると、メモリが不足してポッドがevictionされる現象が発生した。  
+
+忙しいので、とりあえずscale-outで無闇にノード数を増やしていたが、ある日一生懸命働いている私とは違って、のんびり遊んでいるCPUが気に入らず、scale-upを計画した。  
+
+## それがredis-sentinelと何の関係があるの？
+Azure Managed KubernetesはScale-upをサポートしていない。  
+AKSでScale-upを達成する方法は一つしかなく、それは新しいスペックのノードを追加し、ポッドを移行した後、既存ノードを終了することである。  
+
+そうしようとすると、StandAloneで動いているredisポッドを発見し、ユーザーたちのセッションを大量に保存している私たちのレディスを、ただ終了させることはできなかった。  
+
+## redisをHA構成しよう
+redis HA構成を通じて、今後ノードに発生する可能性のある天災地変のような何かに対応しよう。  
+
+レディスHAを達成する方法は大きくsentinelとclusterの二つの方式がある。  
+その違いについては記事の主題と合わないので説明は省略し、結果的に私はsentinelを選択した。  
+
+sentinelとclusterは両方ともhelmを通じた簡単なインストールが可能だが、sentinelについて紹介するようにする。  
+
+## redis-sentinelデプロイ過程
+私たちのサービスはまだ規模が大きくないので、3つのノード（最小スペック）で設定する。  
+
+### ダウンロード
+``` shell showLineNumbers
+# bitnamiリポジトリ追加
+$ helm repo add bitnami https://charts.bitnami.com/bitnami
+    
+# リポジトリ更新
+$ helm repo update
+
+# ローカルにredis chartダウンロード
+$ helm fetch bitnami/redis
+```
+
+### 設定
+次に、私の好みに合わせて設定を修正する。  
+``` yaml showLineNumbers
+...
+auth:
+  # パスワード使用解除
+  enabled: false
+  # パスワード使用解除（センティネル）
+  sentinel: false
+
+...
+sentinel:
+  enabled: true
+```
+
+### デプロイ
+`helm install redis ./redis -n my-namespace`
+
+## 観察
+このようにデプロイすると、以下のリソースが作成される：
+* pod/redis-node-0
+* pod/redis-node-1
+* pod/redis-node-2
+* svc/redis (6379, 26379)
+* svc/redis-headless (6379, 26379)
+
+redis-nodeポッドにはレディスコンテナとセンティネルコンテナが一緒に起動し、それぞれのセンティネルが監視して、条件に応じてマスターノードを選出する。  
+テストしたい場合はポッドを削除してみればよい。  
+
+
+## 既存レディスのデータを新規レディスに移行
+調べてみると、多く使用されているのはdump.rdbファイルやaof設定を活用することである。  
+結論から言うと、[redis dump go](https://github.com/yannh/redis-dump-go)オープンソースを利用した。  
+
+会社PCでWindowsを使用しているので、Windows基準で説明すると：
+### データダンプ
+``` powershell showLineNumbers
+# 旧レディスポートフォワーディング
+kubectl port-forward --address 0.0.0.0 service/redis-svc 6379:6379 -n my-namespace
+
+# 旧レディスに接続してローカルにダンプファイル作成
+docker run --rm -v ${PWD}:/data ghcr.io/yannh/redis-dump-go:latest -host 5.0.55.70 -port 6379 -output resp > dump.resp
+```
+
+### ロード
+``` powershell showLineNumbers
+# 新規レディスポートフォワーディング（* マスターノードに接続しなければwrite不可）
+kubectl port-forward pod/redis-node-0 6379:6379 --address 0.0.0.0 -n my-namespace
+
+# ロード 
+Get-Content ./dump.resp | redis-cli -h 5.0.55.70 -p 6379 --pipe
+```
+
+## スプリング連携
+redis-sentinelを使用する場合、どのノードがマスターノードであるかを知らなければ、アプリケーションでwrite可能なノードに接続できない。  
+
+26379ポートを通じてレディスポッドにアクセスする場合、センティネルに接続されるが、`redis-cli sentinel master {{master-name}}`を入力すると、現在のマスターのIPが分かる。  
+
+spring-data-redisの場合、マスター名とノードのアドレスだけ教えれば、上記の過程を自動的に処理してくれる。  
+``` yaml showLineNumbers
+  data:
+    redis:
+      sentinel:
+        master: mymaster
+        nodes: redis.my-namespace.svc.cluster.local:26379
+```
+
+## テスト
+redisを一つずつ停止しながら、サービスが正常に動作するか、redisとapplicationのログを見ながら異常がないか確認すればよい。

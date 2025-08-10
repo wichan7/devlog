@@ -1,0 +1,32 @@
+---
+title: "package.jsonのtype: moduleとは何だろう？"
+description: 意味不明のオプションを理解しよう
+date: 2023-08-02
+tags:
+  - Javascript
+---
+
+## 発端
+Node.jsプロジェクトで'import'文を使用しようとすると、`SyntaxError: Cannot use import statement outside a module`エラーが発生する。モジュール外部ではimport statementを使用できないという意味だが、モジュールとは何で、なぜimportが使えないのだろうか？
+
+## CommonJSとECMA Script Modules
+CJSとESMは両方ともモジュールシステムである。最初のJavaScriptにはモジュールシステムがなかったが、JSをバックエンドでも使用し始めてから`CommonJS`というモジュールシステムを作成し、デファクトスタンダードとして使用した。
+
+CommonJSは公式的な標準ではなかったため、ECMA Script Modulesというモジュールシステムが標準として新しく制定され、モジュールを活用するためのCommonJSとは異なる文法と内部構造を持っている。
+
+* 余談として、ESMモジュールシステムと'ES6、ES7、ES8'などのECMAScript仕様バージョンは異なるものである。
+
+## 結論
+package.jsonの`type`とは、現在のパッケージがどのモジュールシステムを使用するかを指定するものである。
+``` json showLineNumbers
+{
+  "name": "node_jwt",
+  "version": "1.0.0",
+  "type": "module",
+  ...
+}
+```
+`type: module`を指定する場合、モジュールシステムとして'ESM'を使用するということであり、したがってESMに適合するモジュール文法を使用する必要がある。
+`type: commonjs`または何も指定しない場合、CommonJSの文法であるrequire()文を使用する。
+
+私が使用したいと思ったimport from文はESMの文法であるため、プロジェクトに`type: module`を追加した。
