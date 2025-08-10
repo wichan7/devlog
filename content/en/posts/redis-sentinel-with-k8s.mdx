@@ -1,0 +1,113 @@
+---
+title: Redis-Sentinel Introduction
+description: Let's migrate Redis from standalone operation to a new cluster
+date: 2025-02-26
+tags:
+  - Kubernetes
+  - Redis
+  - Spring
+---
+
+We provide services on Azure's managed Kubernetes.  
+Running JVM-based applications that consume memory heavily, we experienced memory shortages causing pod evictions.  
+
+Since we were busy, we just increased the number of nodes with scale-out, but one day, seeing CPUs playing around while I was working hard, I planned scale-up.  
+
+## What does that have to do with redis-sentinel?
+Azure Managed Kubernetes doesn't support Scale-up.  
+There's only one way to achieve Scale-up in AKS: add new spec nodes, migrate pods, then terminate existing nodes.  
+
+Looking into this, I discovered Redis pods running standalone, and I couldn't just terminate our Redis that was storing user sessions.  
+
+## Let's configure Redis for HA
+Through Redis HA configuration, let's prepare for future natural disasters or similar events that might occur on nodes.  
+
+There are two main ways to achieve Redis HA: sentinel and cluster.  
+Since the difference doesn't fit the post's topic, I'll skip the explanation, but I ultimately chose sentinel.  
+
+Both sentinel and cluster can be easily installed through helm, and I'll introduce sentinel.  
+
+## Redis-sentinel deployment process
+Since our service isn't large yet, I'll configure it with 3 nodes (minimum spec).  
+
+### Download
+``` shell showLineNumbers
+# Add bitnami repository
+$ helm repo add bitnami https://charts.bitnami.com/bitnami
+    
+# Update repository
+$ helm repo update
+
+# Download redis chart locally
+$ helm fetch bitnami/redis
+```
+
+### Configuration
+Next, modify the configuration to my taste.  
+``` yaml showLineNumbers
+...
+auth:
+  # Disable password
+  enabled: false
+  # Disable password (sentinel)
+  sentinel: false
+
+...
+sentinel:
+  enabled: true
+```
+
+### Deployment
+`helm install redis ./redis -n my-namespace`
+
+## Observation
+After deploying like this, the following resources are created:
+* pod/redis-node-0
+* pod/redis-node-1
+* pod/redis-node-2
+* svc/redis (6379, 26379)
+* svc/redis-headless (6379, 26379)
+
+Redis-node pods run with both Redis and Sentinel containers, and each sentinel monitors and elects master nodes based on conditions.  
+If you want to test, you can delete pods.  
+
+
+## Migrate existing Redis data to new Redis
+Looking into it, many people use dump.rdb files or AOF configuration.  
+To get to the point, I used the [redis dump go](https://github.com/yannh/redis-dump-go) open source.  
+
+Since I use Windows on my work PC, I'll explain based on Windows:
+### Data dump
+``` powershell showLineNumbers
+# Port forward old Redis
+kubectl port-forward --address 0.0.0.0 service/redis-svc 6379:6379 -n my-namespace
+
+# Connect to old Redis and create dump file locally
+docker run --rm -v ${PWD}:/data ghcr.io/yannh/redis-dump-go:latest -host 5.0.55.70 -port 6379 -output resp > dump.resp
+```
+
+### Load
+``` powershell showLineNumbers
+# Port forward new Redis (* must connect to master node for write access)
+kubectl port-forward pod/redis-node-0 6379:6379 --address 0.0.0.0 -n my-namespace
+
+# Load 
+Get-Content ./dump.resp | redis-cli -h 5.0.55.70 -p 6379 --pipe
+```
+
+## Spring integration
+When using redis-sentinel, you need to know which node is the master to connect to a write-capable node from your application.  
+
+When accessing Redis pods through port 26379, you connect to sentinel, and entering `redis-cli sentinel master {{master-name}}` shows the current master's IP.  
+
+For spring-data-redis, just tell it the master name and node address, and it handles the above process automatically.  
+``` yaml showLineNumbers
+  data:
+    redis:
+      sentinel:
+        master: mymaster
+        nodes: redis.my-namespace.svc.cluster.local:26379
+```
+
+## Testing
+You can test by killing Redis one by one to see if the service works normally, and check Redis and application logs for any issues.

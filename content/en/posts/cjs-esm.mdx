@@ -1,0 +1,32 @@
+---
+title: "What is type: module in package.json?"
+description: Let's understand this mysterious option
+date: 2023-08-02
+tags:
+  - Javascript
+---
+
+## Background
+When trying to use 'import' statements in a Node.js project, you often encounter the error `SyntaxError: Cannot use import statement outside a module`. This means you cannot use import statements outside of a module, but what is a module and why can't we use import?
+
+## CommonJS and ECMA Script Modules
+CJS and ESM are both module systems. The original JavaScript didn't have a module system, but when JavaScript started being used for backend development, the `CommonJS` module system was created and became the de facto standard.
+
+Since CommonJS wasn't an official standard, the ECMA Script Modules module system was newly established as a standard, with different syntax and internal structure from CommonJS for utilizing modules.
+
+* As a side note, the ESM module system and ECMAScript specification versions like 'ES6, ES7, ES8' are different things.
+
+## Conclusion
+The `type` in package.json specifies which module system the current package will use.
+``` json showLineNumbers
+{
+  "name": "node_jwt",
+  "version": "1.0.0",
+  "type": "module",
+  ...
+}
+```
+When specifying `type: module`, it means you will use the 'ESM' module system, and therefore you must use module syntax that matches ESM.
+When specifying `type: commonjs` or nothing at all, you use the CommonJS syntax with require() statements.
+
+Since the import from statement I wanted to use is ESM syntax, I added `type: module` to my project.

@@ -1,0 +1,213 @@
+---
+title: Setting up GraphQL Server
+description: The name sounds cool, right?
+date: 2023-10-23
+tags:
+  - Web
+  - GraphQL
+  - NoSQL
+---
+
+## What is GraphQL
+> GraphQL is a query language for APIs and a runtime for fulfilling those queries with your existing data.  
+...  
+GraphQL gives clients the power to ask for exactly `what they need and nothing more`, makes it easier to evolve APIs over time, and enables powerful developer tools.
+
+Looking at the official documentation, it's described as a Query Language that responds with exactly the data needed.  
+Clients write GraphQL to communicate with GraphQL servers and obtain data.
+
+## Problems with REST
+RESTful requests are typically performed as follows.  
+`GET https://example.com/users`  
+
+The response at this time can be expected as follows.  
+``` json showLineNumbers
+{
+    "count": 3,
+    "users": [
+        {
+            "id": 1,
+            "firstName": "gildong",
+            "lastName": "hong",
+            "age": 25,
+            "address": "Seoul, Gangnam-gu, Yeoksam-dong"
+        }, {
+            "id": 2,
+            "firstName": "chulsoo",
+            "lastName": "kim",
+            "age": 23,
+            "address": "Gyeonggi-do, Namyangju-si, Byeolnae-dong"
+        }, {
+            "id": 3,
+            "firstName": "wichan",
+            "lastName": "kang",
+            "age": 24,
+            "address": "Seoul, Jungnang-gu, Sinnae-dong"
+        }
+    ]
+}
+```
+
+If I need people's addresses and request `/users`, I can get the addresses, but I also receive unnecessary data like names, ages, addresses, etc.  
+This phenomenon is called `Over Fetching`.  
+
+Second, let's assume we need profile pictures of people along with addresses, so we call `/user/:id/profile`.  
+To get addresses and people's profile images, we need to call `/users` first, then repeatedly call `/user/:id/profile` as many times as there are users.  
+When we can't get all the desired data with one request like this, it's called `Under Fetching`.  
+
+## GraphQL's Solution
+GraphQL provides a unified interface to solve Over/Under fetching.  
+Just like writing Select statements in RDB interface, you just need to send a Query that fits GraphQL.
+
+## GraphQL Request
+GraphQL structure is as follows.  
+``` graphql showLineNumbers
+{
+    users {
+        id
+        address
+        profile
+    }
+}
+```
+
+When you send a Post request to the GraphQL server like this, the GraphQL server parses the query and performs appropriate actions.  
+
+We can write source code between the appropriate actions that the GQL server automatically performs, load data, combine it, and handle data as we want.  
+
+Structure and Documentation for Data can also be written awesomely.
+
+## Before Implementation
+GraphQL is just a specification, so you can take implementations made by others and use them.  
+In this post, I implemented it through Apollo Server, a GraphQL implementation.  
+
+Since the goal is understanding GraphQL, I don't connect to actual databases, and data is maintained only in memory.  
+
+## Installing Apollo Server Package
+``` shell showLineNumbers
+npm install apollo-server
+```
+
+## server.js
+``` javascript showLineNumbers
+import { ApolloServer, gql } from "apollo-server";
+import { db } from "./database.js";
+
+let {tweets, users} = db;
+const typeDefs = gql`
+    """
+    Represents user information.
+    """
+    type User {
+        id: ID!
+        firstName: String!
+        lastName: String!
+        fullName: String!
+    }
+
+    """
+    Represents a post.
+    """
+    type Tweet {
+        id: ID!
+        text: String!
+        author: User
+    }
+    
+    type Query {
+        """
+        Gets all tweets.
+        """
+        allTweets: [Tweet!]!
+
+        """
+        Gets the tweet with the specified :id.
+        """
+        tweet(id: ID!): Tweet
+        
+        """
+        Gets information of all users.
+        """
+        allUsers: [User!]!
+    }
+    type Mutation {
+        postTweet(text: String!, userId: ID!): Tweet
+        deleteTweet(id: ID!): Boolean
+    }
+`;
+
+const resolvers = {
+    Query: {
+        allTweets: () => tweets,
+        tweet: (_, {id}) => tweets.find(t => t.id === id),
+        allUsers: () => users
+    },
+    Mutation: {
+        postTweet(_, {text, userId}) {
+            const newTweet = {
+                id: tweets.length + 1,
+                text,
+            };
+            tweets.push(newTweet);
+            return newTweet;
+        },
+        deleteTweet(_, {id}) {
+            const tweet = tweets.find(tweet => tweet.id === id);
+            if (!tweet) return false;
+            tweets = tweets.filter( t => t.id !== tweet.id );
+            return true;
+        }
+    },
+    User: {
+        fullName: ({firstName, lastName}) => firstName + " " + lastName
+    },
+    Tweet: {
+        author({userId}) {
+            return users.find(u => u.id === userId)
+        }
+    }
+}
+
+const server = new ApolloServer({typeDefs, resolvers});
+
+server.listen().then(({url}) => {
+    console.log(`Running on ${url}`);
+})
+```
+
+## database.js
+``` javascript showLineNumbers
+const tweets = [{
+    id: "1",
+    text: "my first tweet",
+    userId: "2"
+}, {
+    id: "2",
+    text: "second tweet",
+    userId: "1"
+}];
+
+const users = [{
+    id: "1",
+    firstName: "gildong",
+    lastName: "hong"
+}, {
+    id: "2",
+    firstName: "chulsoo",
+    lastName: "kim"
+}];
+
+export const db = {
+    tweets, users
+};
+```
+
+To run a GraphQL server using Apollo, typeDef and resolver are essential parameters.  
+
+typeDef is an item that defines types of data in advance, like Mongoose.  
+Query is a specification for retrieval, and Mutation is a specification for cases where data state can potentially change, as the name suggests.  
+
+resolver is the writing part for the actual data processing logic.  
+As you can see in the example, when you override def in resolver, you can handle processing of that data in between.  
+
+Once you get a little familiar with Query, you can really easily get the data you want.

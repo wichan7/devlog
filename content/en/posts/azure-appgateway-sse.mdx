@@ -1,0 +1,27 @@
+---
+title: SSE Timeout Issue in Azure AppGateway Environment
+description: Why isn't the response coming...
+date: 2025-03-29
+tags:
+  - Azure
+  - Infra
+---
+
+## Overview
+A requirement arose to provide real-time server changes to clients.
+I implemented this using the Http Streaming (SSE) protocol, and since it worked well locally, I deployed it to the cloud environment.
+
+However, after deploying to the cloud environment, only SSE requests didn't receive responses on time. (The connection was cut off after 30 seconds along with the response.)
+
+## Solution
+The problem was with Azure Application Gateway, which implements the Ingress.
+Our service uses Azure-managed Kubernetes and reverse proxies traffic through AppGateway.
+
+AppGateway uses nginx internally, and nginx's Response Buffering feature is activated.
+The curious part was why only SSE responses were buffered and didn't arrive, but even after searching, I couldn't find the buffering size and conditions. ㅠㅠ
+(Some say that SSE responses use Transfer-Encoding: chunked, so nginx doesn't know the exact size and buffers until it reaches the standard buffering size, but I'm not sure if this is accurate.)
+
+Still, I solved the symptom.
+Following a Stack Overflow answer, I added the `x-accel-buffering: no` header to the http headers when sending SSE Emitter Response.
+
+[Stack Overflow Ref](https://stackoverflow.com/questions/76161274/delay-in-getting-sse-events-when-configured-via-azure-application-gateway)

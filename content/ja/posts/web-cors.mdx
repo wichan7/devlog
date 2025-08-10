@@ -1,0 +1,83 @@
+---
+title: Web技術 - CORS
+description: イライラさせるCORSを征服してしまおう
+date: 2023-08-06
+tags:
+  - Web
+  - CORS
+---
+
+## 概要
+Web開発をしていると、以下のような'CORS policy'エラーに遭遇する場合が多い。
+![error-cors](/images/web/error-cors.png)
+
+今回のポストではCORSを理解することが目標である。
+
+## Web OriginとSame Origin Policy
+Web OriginとSame Origin Policyは、国際インターネット標準化機構（IETF）が管理する[RFC-6454 (2011.12)](https://www.rfc-editor.org/rfc/rfc6454)文書で登場する表現である。
+
+> **The Web Origin Concept**  
+This document defines the concept of an "origin", which is often used
+as the scope of authority or privilege by user agents.  Typically,
+user agents isolate content retrieved from different origins to
+prevent malicious web site operators from interfering with the
+operation of benign web sites.  In addition to outlining the
+principles that underlie the concept of origin, this document details
+how to determine the origin of a URI and how to serialize an origin
+into a string.  It also defines an HTTP header field, named "Origin",
+that indicates which origins are associated with an HTTP request.  
+... rfc6454から
+
+> **Principles of the Same-Origin Policy**  
+Many user agents undertake actions on behalf of remote parties.  For
+example, HTTP user agents follow redirects, which are instructions
+from remote servers, and HTML user agents expose rich Document Object
+Model (DOM) interfaces to scripts retrieved from remote servers.
+Without any security model, user agents might undertake actions
+detrimental to the user or to other parties.  Over time, many web-
+related technologies have converged towards a common security model,
+**known colloquially as the "same-origin policy"**.  Although this
+security model evolved largely organically, the same-origin policy
+can be understood in terms of a handful of key concepts.  This
+section presents those concepts and provides advice about how to use
+these concepts securely.  
+... rfc6454から
+
+Same-Origin Policyはセキュリティのための政策で、User Agent（=ブラウザ）は同じWeb Originに対してのみ通信しなければならないという政策である。
+例を挙げると、ブラウザはhttps://wichan7.github.ioからhttps://google.comへのXHRリクエストをできないようにブロックする責任がある。
+
+## Cross Origin Resource Sharing
+SOPはセキュリティ上重要だったが、他ドメインのリソースを呼び出すことが有用な場合が頻繁にあるため、CORSと呼ばれる例外政策が追加された。
+CORSは他ドメイン（Cross-Origin）間でリソースを共有するために作られた政策である。
+
+## CORS通信の3つのシナリオ
+[参照1](https://www.baeldung.com/cs/cors-preflight-requests)
+[参照2](https://developer.mozilla.org/ko/docs/Web/HTTP/CORS)
+
+### Simple Requests
+![simple](/images/web/simple.png)
+以下の条件をすべて満たすと、ブラウザはSimple-Requestsとして動作する。
+* GET、HEAD、POSTリクエストの場合
+* リクエストにAccept、Accept-Language、Content-Language、Content-Typeなどのブラウザヘッダーのみを含む場合
+* リクエストにCORS Safelistedヘッダーのみを含む場合
+* ... その他など（詳細は元の出典にある）
+
+ブラウザはHTTPリクエストにOriginヘッダーを含めてリクエストし、サーバーは応答access-control-allow-originヘッダーにSOP例外ドメインを含む。
+ブラウザはRequestのOriginとaccess-control-allow-originを比較し、同じであれば正常処理し、異なれば破棄する。
+
+### Non-Simple Requests
+![nonsimple](/images/web/nonsimple.png)
+Simple-Requestsに含まれないリクエストであれば、Pre-flightリクエストと呼ばれる過程が追加される。
+ブラウザは実際のRequest以前にaccess-control-allow-originを受け取るためのOPTIONリクエストを実行する。
+これがPre-flightリクエストである。pre-flightが正常であれば、その後実際のrequestを実行することになる。
+
+### Credentialed Requests
+![credentials](/images/web/credentials.png)
+基本的にCookieやAuthorizationなどの認証情報をCORSするには、サーバーがaccess-control-allow-originのみ応答してはならない。
+ブラウザはRequest時にcredentialsオプションを使用しなければならず、サーバーはaccess-control-allow-credentials:trueヘッダーと、ワイルドカードではないドメインが明示されたaccess-control-allow-originヘッダーを応答しなければならない。
+
+## 結論
+CORSはブラウザとサーバー間でSOP例外として通信する必要がある時に必要な政策である。
+結局SOPはブラウザ-サーバー間の政策であるため、サーバー-サーバー通信ではCORSを使用せよというエラーメッセージは発生しない。
+
+自社サービスであればフレームワークが提供するcors関連ライブラリを使用して処理でき、他サービスにXHR呼び出しする必要がある場合はProxyを構成する方法がある。

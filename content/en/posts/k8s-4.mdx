@@ -1,0 +1,94 @@
+---
+title: Kubernetes - DB in Pods?
+date: 2023-05-20
+tags:
+  - MSA
+  - Kubernetes
+  - DB
+---
+
+## How to use DB in Kubernetes?
+Containers do not maintain data from before restart when they restart.  
+Therefore, for services that need to be Stateful like databases, you can mount volumes to external file systems to maintain state.  
+
+### Container volume mounting in Docker
+In Docker, you can specify volumes to mount when running containers in the form of `-v {external volume}:{internal volume in container}`.
+```
+docker run --name {name} -v {external volume}:{container volume} -d -p {ext port}:{int port} {image}:{version}
+
+Example) docker run --name mongo -v C:\\mongo-mount:/data/db -d -p 27017:27017 wichan-mongo:0.0.2
+```  
+
+In this case, even if the container terminates, you can continue the service by referencing the mount path when restarting, so it's appropriate.  
+
+### Pod (container) volume mounting in k8s
+Since k8s is ultimately a tool for running containers, you can maintain state by mounting pod volumes to nodes.  
+However, additional considerations are needed when using replicaset functionality.  
+If multiple replicas that mount the same volume are created, conflicts will occur.  
+
+Reference1: https://bcho.tistory.com/1306  
+Reference2: https://velog.io/@hoonki/%EC%BF%A0%EB%B2%84%EB%84%A4%ED%8B%B0%EC%8A%A4k8s-Persistent-Storage%EB%9E%80
+
+## Let's try deploying DB in k8s
+Reference: https://zzsza.github.io/development/2019/01/27/kubernetes-statefulset/  
+
+### Try registering with Deployment
+``` yaml
+apiVersion: apps/v1
+kind: Deployment      # deployment > replicaset > pod
+metadata:
+  name: mongo-deployment       # deployment's name
+  labels:
+    app: mongo                 # labels can be attached to resources
+spec:                 # define deployment spec
+  replicas: 4         # create 4 replica pods
+  selector:           # method for deployment to find pods to manage
+    matchLabels:      # select pods with app=mongo label
+      app: mongo
+  template:                    # define meta, spec for pods to be created
+    metadata:
+      labels:
+        app: mongo             # attach app=mongo label to pod
+    spec:
+      containers:              # create one container
+      - name: mongo            # value of name field is mongo
+        image: mongo:latest    # use latest mongo image
+        ports:
+        - containerPort: 27017    # specify container port
+```
+```
+kubectl apply -f mongo-deployment.yaml
+```
+![structure](/images/k8s/0522_pods.png)  
+
+### Register with Statefulset
+Let's create mongo pods with statefulset.   
+``` yaml
+kind: StatefulSet         # create statefulset
+apiVersion: apps/v1       # statefulset is supported from apps/v1
+metadata:                 # specify sfs metadata
+  name: mongo-primary-0   # sfs name, but pods are named {sfs name}-{number} when created
+spec:                     # specify sfs spec
+  replicas: 1             # specify number of replicas
+  selector:               # specify selector to map pods
+    matchLabels:
+      app: mongo-primary
+  template:               
+    metadata:             # specify pod metadata
+      labels:
+        app: mongo-primary
+    spec:                 # specify pod spec
+      volumes:
+        - name: mongodata # find volume named mongodata and mount to /app/mongo on node
+          hostPath:
+            path: /app/mongo
+      containers:
+        - name: mongo-primary-container
+          image: mongo:latest
+          ports:
+            - containerPort: 27017
+              protocol: TCP
+          volumeMounts:
+            - name: mongodata
+              mountPath: /data/db         # specify pod's /data/db as mongodata name
+```

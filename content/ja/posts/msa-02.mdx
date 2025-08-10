@@ -1,0 +1,57 @@
+---
+title: MSA設計と実装 - 02
+description: プロジェクト進行状況の共有
+date: 2023-06-30
+tags:
+  - Architecture
+  - Kubernetes
+  - Docker
+  - MSA
+---
+## 概要
+[MSA設計と実装 - 01](https://wichan7.github.io/msa/msa-01/)の後続として、チャットボットサービスを実装しようとしている。
+
+## 現在の構成
+
+サービス名|説明|github
+---:|:---|:---:
+wic-api|チャットボットシステム全般に対する外部連携機能を提供|[移動](https://github.com/wichan7/wic-api.git)
+wic-app|ログイン、ダッシュボードなど管理者画面全般|[移動](https://github.com/wichan7/wic-app.git)
+wic-soe|チャットボットの実際のプロセシングを担当|-
+wic-chatbot|soeのプロセシングされた結果を受け取り、Webサービス|-
+wic-mongo|サービスで管理すべきデータを保存|[移動](https://github.com/wichan7/wic-mongo.git)
+wic-redis|セッションなど揮発するデータ管理に使用|[移動](https://github.com/wichan7/wic-redis.git)
+wic-resources|サービスではないが...yaml、imageなどを登録|[移動](https://github.com/wichan7/wic-resources.git)
+
+## 進行度
+### 現在
+**インフラレベル**
+
+* EC2 3台インスタンスにKubernetesクラスター構成
+* app、api、mongo、redisに対するService、Deployment、Statefulset指定
+
+**サービスレベル**
+
+サービス名|説明|使用スタック
+---:|:---|---
+wic-api|login、joinに対するAPI提供|nodejs
+wic-app|login、joinに対するフロント、バック提供|nodejs、react
+wic-mongo|User collection実装|mongo
+wic-redis|-|redis
+
+### すること
+**インフラレベル**
+
+* nginx-ingress構成
+* mongo、redis HA構成
+* オートスケーリング実装
+
+**サービスレベル**
+
+サービス名|説明
+---:|:---
+wic-api|ログインJWT適用
+wic-app|ログインJWT適用、チャットボット作成画面実装
+wic-soe|チャットボットプロセシング実装
+wic-chatbot|チャットボットユーザーフロント実装
+wic-redis|セッション管理

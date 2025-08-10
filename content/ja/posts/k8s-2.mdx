@@ -1,0 +1,221 @@
+---
+title: kubernetesクラスターを「直接」構築する
+description: 涙の物語
+date: 2023-04-21
+tags:
+  - MSA
+  - Kubernetes
+---
+
+# プロビジョニング
+## プロビジョニングとは...
+ユーザーの要求に合わせてシステムリソースを割り当て、配置、デプロイし、必要時にシステムを即座に使用できる状態で事前に準備しておくことを指す。
+
+## プロビジョニング方法の選択
+k8sをプロビジョニングするための有名な方法として3つがある。
+1. kubernetes  
+複数のクラスター構成要素を直接インストールして設定する。
+1. kubeadm  
+k8sを簡単に実装できるように支援するブートストラップツールである。  
+k8sが公式にサポートし、更新するk8s実装ツールである。
+1. kops  
+kubeadmと同様に簡単な実装のためのブートストラップツールだが、「クラウドプラットフォーム」で簡単にk8sをインストールできるように支援するツールである。
+
+参考文献が多く、公式ホームページで紹介されているkubeadmを使用して構築してみる。
+
+# 始める前に...
+週末だけの作業だったが、単純なセットアップでも1ヶ月間本当に多くの試行錯誤をした。  
+以下で紹介する順序と方法は涙で書かれたものである。  
+
+# AWSインスタンス構成
+## インスタンス仕様
+私は以下のような3つのインスタンスを作成した。  
+Master, t3.xlarge, 20GiB EBS, redhat  
+Worker1, t3.medium, 20GiB EBS, redhat  
+Worker2, t3.medium, 20GiB EBS, redhat  
+  
+Masterノードはできるだけt3.medium以上を推奨する。（kube-master推奨は2cpu、4GB RAMである。）  
+Workerは無料で使用可能なt2.microを使用しても構わない。
+
+## インスタンスセキュリティグループ
+master inbound  
+
+|protocol|port|target|description|  
+|---|---|---|---|  
+|UDP|8285|172.31.48.0/20|Flannel|  
+|UDP|8472|172.31.48.0/20|Flannel|  
+|TCP|22|0.0.0.0/0|ssh|  
+|TCP|10252|172.31.48.0/20|kube-controller-manager (used by Self)|  
+|TCP|10250|172.31.48.0/20|Kubelet API (used by Self, Control plane)|  
+|TCP|6443|172.31.48.0/20|Kubernetes API Server (used by All)|  
+|TCP|10251|172.31.48.0/20|kube-scheduler (used by Self)|  
+|TCP|2379-2380|172.31.48.0/20|Etcd server client API (used by kube-apiserver, etcd)|  
+
+worker inbound  
+
+|protocol|port|target|description|  
+|---|---|---|---|  
+|UDP|8285|172.31.48.0/20|Flannel|  
+|UDP|8472|172.31.48.0/20|Flannel|  
+|TCP|22|0.0.0.0/0|ssh|  
+|TCP|30000 - 32767|0.0.0.0/0|NodePort Services (used by All)|  
+|TCP|10250|172.31.48.0/20|Kubelet API (used by Self, Control plane)|  
+
+NodePort、SSHを除くすべてのtarget cidrをVPCサブネットである172.31.48.0/20に変更した。
+
+# yum設定と基本インストールファイルダウンロード
+マスター、ワーカーノードに同じ過程をそれぞれ繰り返す。  
+
+## yum update
+``` sh
+sudo yum update -y
+```
+
+## 必須インストールファイルダウンロードのためのyumリポジトリ設定  
+docker、containerdインストールのためにrepoを設定する。
+``` sh
+cd /etc/yum.repos.d  
+sudo wget https://download.docker.com/linux/centos/docker-ce.repo  
+```
+
+kubectl、kubeadm、kubeletインストールのためにrepoを設定する。
+``` sh
+cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+exclude=kube*
+EOF
+```
+
+## 必須インストールファイルインストール
+docker-ce、containerd、kubeadm、kubectl、kubelet
+``` sh
+sudo yum install containerd.io  
+sudo yum install kubelet kubeadm kubectl --disableexcludes=kubernetes
+```
+
+# Linux設定変更
+## Selinux設定をpermissiveモードに変更  
+``` sh
+sudo setenforce 0
+sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+sudo systemctl enable --now kubelet
+```
+
+## Swap off  
+Linux自体のSwap機能を使用する場合、Kubernetesのリソース管理（ポッド配置など）が異常に動作する。
+``` sh
+sudo swapoff -a  
+sudo sed -e '/swap/ s/^#*/#/' -i /etc/fstab
+```
+
+# Containerd設定
+## containerdのためのモジュールロード
+``` sh
+cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
+overlay
+br_netfilter
+EOF
+
+sudo modprobe overlay
+sudo modprobe br_netfilter
+```  
+
+## containerdのためのsysctlパラメータ設定  
+``` sh
+// 必要なsysctlパラメータを設定すると再起動後も維持される。
+cat <<EOF | sudo tee /etc/sysctl.d/99-kubernetes-cri.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.ipv4.ip_forward                 = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+EOF
+
+// 再起動せずにsysctlパラメータ適用
+sudo sysctl --system
+```
+
+## containerd config.toml cgroup設定
+``` sh
+cd /etc/containerd/config.tomlを以下の内容に変更。
+
+version = 2
+[plugins]
+  [plugins."io.containerd.grpc.v1.cri"]
+   [plugins."io.containerd.grpc.v1.cri".containerd]
+      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
+        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+          runtime_type = "io.containerd.runc.v2"
+          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+            SystemdCgroup = true
+
+```
+
+## 再起動時にもcontainerdが実行されるように設定  
+``` sh
+sudo systemctl enable containerd
+sudo systemctl restart containerd
+```
+
+# Kubernetesクラスター構成
+## kubeadm init  
+この作業はマスターノードでのみ進行する。  
+
+CNI設定に応じて--pod-network-cidrを変更する必要がある。  
+Flannelは10.244.0.0/16  
+Calicoは192.168.0.0/16  
+私たちはFlannelをインストールする。
+``` sh
+sudo kubeadm init \
+    --apiserver-advertise-address={master private ip} \
+    --pod-network-cidr=10.244.0.0/16 \
+    --apiserver-cert-extra-sans={master private ip}
+```
+
+## kubectlコマンドのためのkubeconfigファイル作成
+この作業はマスターノードでのみ進行する。  
+``` sh
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+```
+
+## worker node join  
+この作業はワーカーノードでのみ進行する。  
+``` sh
+sudo kubeadm join {private ip}:6443 --token jle89r.6qqk9qlhx8wozd6p \
+        --discovery-token-ca-cert-hash sha256:e37231d3d866429b0caa85b2a9dce668b69d68e016f9981123782d20475131ab
+```
+
+## Flannel CNIインストール  
+この作業はマスターノードでのみ進行する。  
+``` sh
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+```
+
+## workerノードにscpでconfigファイル転送
+workerでもkubectlコマンドを使用できるように、マスターにあるconfigファイルを転送する。  
+``` sh
+scp /home/ec2-user/.kube/config 172.31.32.49:/home/ec2-user/.kube
+```
+
+# エラー処理  
+## kubeadm init時にCPU、メモリ関連の問題がある場合  
+kubeadm最小仕様としてcpu2、ram2GBが必要だが、t3.microは該当最小仕様を満たしていない。  
+``` sh
+#以下のオプションで仕様関連を無視できる。
+--ignore-preflight-erros=NumCPU,Mem
+```
+
+## kubeadm joinトークン、certハッシュ値を再取得  
+``` sh
+kubeadm token list
+openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
+```
+
+成功  
+![structure](/images/k8s/0509_kubectl_get_pods.png)

@@ -1,0 +1,117 @@
+---
+title: Creating Puppeteer Web Crawler - 2
+description: Direct implementation
+date: 2023-09-17
+tags:
+  - Web
+  - Crawling
+---
+## Overview
+[👉 Go to Web Crawler Creation - 1](https://wichan7.github.io/web/web-crawling-1/)  
+
+I configured a crawling bot that collects email addresses from web pages using Puppeteer and Cheerio modules.  
+It collects email addresses from the `Trigger Page` and explores `<a href=...>` to visit without duplicates.  
+
+## Module Documentation
+[👉 Puppeteer Documentation](https://pptr.dev/)  
+[👉 Cheerio](https://cheerio.js.org/docs/intro)  
+
+## Source Code
+``` javascript showLineNumbers
+// crawl.js
+// 3rd party declaration
+import * as puppeteer from 'puppeteer';
+import * as cheerio from 'cheerio';
+// own libraries declaration
+import Queue from './queue.js';
+
+/**
+ * Concept:
+ *  1. dequeue url from visitQueue
+ *  2. visit url
+ *  3. extract email address list
+ *  4. extract href, enqueue to visitQueue
+ *  6. repeat 1 ~ 4
+ */
+(async() => {
+    const emails = new Set();
+    const histories = new Set();
+    const visitQueue = new Queue();
+
+    const browser = await puppeteer.launch();
+    const workPage = await browser.newPage();
+
+    // Trigger Page setup
+    visitQueue.enqueue("https://www.naver.com");
+    while (!visitQueue.isEmpty()) {
+        // 1.
+        const url = visitQueue.dequeue();
+        // 2.
+        await workPage.goto(url);
+        // 3.
+        const $ = cheerio.load(await workPage.content());
+        for (let email of extractEmails($)) {
+            emails.add(email);
+        }
+        // 4.
+        for (let href of validateHrefs(extractHrefs($), histories)) {
+            visitQueue.enqueue(href);
+        }
+        // logging
+        console.log(emails);
+    }
+})();
+
+function extractEmails($) {
+    /**
+     * RFC2822 Email Validation
+     */
+    return $('body').text().match(/[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/g) || [];
+}
+
+function extractHrefs($) {
+    const hrefs = [];
+
+    $('a').each( (i, a) => {
+        const href = $(a).attr('href') || "";
+        if (href.startsWith("https://") || href.startsWith("http://")) {
+            hrefs.push(href);
+        }
+    } );
+
+    return hrefs;
+}
+
+function validateHrefs(hrefs, histories) {
+    return hrefs.filter( href => !histories.has(href) )
+}
+
+async function wait(seconds) {
+    return new Promise( resolve => setTimeout(resolve, seconds * 1000) )
+}
+```
+
+``` javascript showLineNumbers
+// queue.js
+export default class Queue {
+    constructor() {
+        this.arr = []
+    }
+
+    enqueue(element) {
+        this.arr.push(element)
+    }
+
+    dequeue() {
+        return this.arr.shift()
+    }
+
+    isEmpty() {
+        return this.arr.length === 0 ? true : false
+    }
+}
+```
+
+## Improvement Directions
+1. After trimming Query and Path Parameters, duplicate checking should be performed to avoid visiting meaningless pages multiple times. (Using Canonical Tag might work?)  
+2. When href contains paths like `'/path'`, `'./path'` instead of full URLs, they are discarded, but if baseUrl can be obtained, path and base_url composition would be possible.

@@ -1,0 +1,86 @@
+---
+title: ジャバスクリプト、バッククォートの素晴らしい活用
+description: テンプレートリテラル以外に何がある？
+date: 2023-11-20
+tags:
+  - Javascript
+---
+
+## バッククォート
+
+Windowsキーボードのチルダキーにあるこれ。**`** がバッククォートである。
+バッククォートにはテンプレートリテラル以外に、関数を呼び出す機能もある。（ㄷㄷ！）
+
+## テンプレートリテラル
+
+```javascript showLineNumbers
+const name = "wichan";
+const str = `hello ${name}!`;
+
+// result: hello wichan!
+console.log(str);
+```
+
+これをテンプレートリテラルと呼ぶ。
+
+## タグ付きテンプレート
+
+さて、この[タグ付きテンプレート](https://tc39wiki.calculist.org/es6/template-strings/)のためにポストした。
+
+```javascript showLineNumbers
+function fun(arg) {
+  console.log(arg);
+}
+
+// result: funny javascript
+fun("funny javascript");
+// result: [ 'funny javascript' ]
+fun`funny javascript`;
+```
+
+バッククォートで関数を呼び出すことに成功した。でもなぜargが配列として入ってきたのだろうか？
+
+### こんな時に使う。
+
+実は、バッククォートで関数を呼び出す時、渡される引数がもっとある。
+次の例を見よう。
+
+```javascript showLineNumbers
+const name = "wichan";
+const age = 25;
+
+function intro(strings, ...values) {
+  console.log(strings);
+  console.log(values);
+}
+
+/** result:
+ *   strings: ['my name is ', ' and i am ', ' years old.']
+ *   values: ['wichan', 25]
+ */
+intro`my name is ${name} and i am ${age} years old.`;
+```
+
+バッククォートで関数を呼び出す場合、最初の引数としてテンプレートを制限された文字列配列、その後にテンプレート値を引数として提供する。
+関数に文字列を入力する時、テンプレート変数と文字列を分離する時に使用できる。
+
+### 隠された機能がもう一つある。
+
+実はタグ付きテンプレートには隠された機能がもう一つある。
+
+```javascript showLineNumbers
+function fun(strings) {
+  console.log(strings);
+  console.log(strings.raw);
+}
+
+/** result:
+ * [ 'directory: C:System32etc...' ]
+ * [ 'directory: C:\\System32\\etc...' ]
+ */
+fun`directory: C:\System32\etc...`;
+```
+
+エスケープされていない元の文字列を示す。
+
+終わり

@@ -1,0 +1,112 @@
+---
+title: Implementing Priority Queue (Feat. Heap)
+description: Why doesn't JavaScript have a priority queue STL?
+date: 2023-10-05
+tags:
+  - Algorithm
+  - Javascript
+---
+
+## What is a Priority Queue?
+> A Priority Queue is a data structure where data with higher priority comes out first.
+Even if an element just entered the queue, if it has the highest priority, it can come out first.
+
+## How to Implement It?
+Let's assume that smaller numbers have higher priority. How can we implement this?
+
+### Intuitive Method
+Intuitively, we can think of a method where we put it in and then iterate through all elements in the array.
+``` javascript showLineNumbers
+class PQ {
+    constructor() {
+        this.queue = [];
+    }
+
+    push = (e) => this.queue.push(e); 
+
+    pop = () => {
+        if (this.queue.length === 0) return;
+
+        let min = Infinity;
+        for (let elem of this.queue) {
+            if (elem < min) min = elem;
+        }
+        return min;
+    }
+}
+```
+I implemented the requirements using an intuitive method.
+
+> At this time, it's obvious that the time complexity of the push function is O(1)
+and the time complexity of the pop function is O(N).
+
+### Method Using Heap Data Structure
+A **Heap** is a `complete binary tree` where the parent node is always smaller than the child node.
+For reference, a complete binary tree is a tree data structure where nodes are filled from the top and left.
+`Complete Binary Tree`
+![structure](/images/algorithm/heap/complete.png)
+
+`Perfect Binary Tree`
+![structure](/images/algorithm/heap/perfect.png)
+
+Complete binary tree and perfect binary tree are different; a perfect binary tree is completely filled with nodes.
+
+Anyway, we can create a priority queue using the heap's characteristic that 'the parent node is always smaller than the child node'.
+When pushing to the queue, we always insert while maintaining the heap structure,
+and when popping from the queue, if we pop the root node of the heap, it becomes a priority queue.
+
+#### Implementation
+``` javascript showLineNumbers
+class PQ {
+    constructor() {
+        this.heap = [null];
+    }
+
+    _swap = (a, b) => [this.heap[a], this.heap[b]] = [this.heap[b], this.heap[a]];
+
+    size = () => this.heap.length - 1;
+
+    peek = () => this.heap[1] !== undefined ? this.heap[1] : null;
+
+    push = (value) => {
+        this.heap.push(value);
+        let curIdx = this.heap.length - 1;
+        let parIdx = (curIdx / 2) >> 0;
+
+        while (curIdx > 1 && this.heap[curIdx] < this.heap[parIdx]) {
+            this._swap(parIdx, curIdx)
+            curIdx = parIdx;
+            parIdx = (curIdx / 2) >> 0;
+        }
+    }
+
+    pop = () => {
+        const min = this.heap[1];
+        if (this.heap.length <= 2) this.heap = [null];
+        else this.heap[1] = this.heap.pop();
+
+        let curIdx = 1;
+        let leftIdx = curIdx * 2;
+        let rightIdx = curIdx * 2 + 1;
+
+        while (this.heap[leftIdx] < this.heap[curIdx] || this.heap[rightIdx] < this.heap[curIdx]) {
+            const minIdx = this.heap[leftIdx] > this.heap[rightIdx] ? rightIdx : leftIdx;
+            this._swap(minIdx, curIdx);
+            curIdx = minIdx;
+            leftIdx = curIdx * 2;
+            rightIdx = curIdx * 2 + 1;
+        }
+
+        return min;
+    }
+}
+```
+
+> At this time, we can see that the time complexity of the push function is O(logN)
+and the time complexity of the pop function is O(logN).
+
+## Conclusion
+Basic JavaScript doesn't provide heap or STL's priority_queue, so we have to implement it ourselves.
+Not just this, but I've been implementing combination, permutation, queue... etc. directly.
+
+When am I going to implement this during coding tests...

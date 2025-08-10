@@ -1,0 +1,321 @@
+---
+title: nginx logrotate Troubleshooting
+description: Why did this take so long...
+date: 2024-09-01
+tags:
+  - Web
+  - Kubernetes
+  - Nginx
+  - Logrotate
+---
+
+## Overview
+
+During work, I needed to manage nginx access logs by date.
+I thought it would be easy, but there was a lot of troubleshooting. I'll introduce the troubleshooting process and solution.
+
+Busy people, just look at the conclusion.
+
+## Environment
+
+- Azure Managed Kubernetes
+- PV mounted with nfs
+- /var/log/nginx mounted
+- nginx: 1.27.1
+
+## First Attempt (Failed)
+
+Looking on the internet, there were many examples of using the logrotate package on Linux.
+
+The gist is as follows:
+
+1. logrotate is simply a package that renames files.
+   It has no scheduling function, so install cron to set logrotate to run every day.
+
+2. When cron runs logrotate, the access.log file is renamed to access.log-yyyymmdd.
+
+3. Since logrotate simply renames files, nginx continues writing logs to the renamed file. We want a new access.log to be created, so we send a signal to nginx with the `kill -USR1` command to reopen the file.
+
+```dockerfile showLineNumbers
+# dockerfile
+FROM nginx:1.27.1
+
+RUN apt-get install -y logrotate cron
+COPY ./logrotate.conf /etc/logrotate.conf
+
+RUN sh -c cron && nginx -g 'daemon off'
+```
+
+```sh showLineNumbers
+# logrotate.conf
+/var/log/nginx/*.log {
+	daily
+	rotate 365
+	dateext
+	dateyesterday
+	missingok
+	compress
+	delaycompress
+	ifempty
+	sharedscripts
+	postrotate
+      if [ -f /var/run/nginx.pid ]; then
+        kill -USR1 `cat /var/run/nginx.pid`
+      fi
+	endscript
+}
+```
+
+When implemented this way, there were problems:
+
+1. It continued recording logs to access.log-yyyymmdd files.
+   -> nginx doesn't reopen the file... I didn't know why at the time.
+2. After container restart, logrotate didn't run on the first day.
+   -> logrotate records the last-rotate time in `/var/lib/logrotate/status`, but on the first day (after container restart), the file doesn't exist, so rotation doesn't happen.
+3. I wanted it to run at 00:00, but it executed at 06:25.
+   -> cron.daily's default execution time is 06:25...
+
+## Second Attempt (Thought it was solved but failed)
+
+### Problem 1 Countermeasure
+
+Unable to identify the cause, I tried using logrotate's copytruncate option so that rotation could happen even if nginx didn't reopen the file.
+The previous method was to rename the file being written to. copytruncate creates a new file and copies the log content to the new file. Then it deletes that much history from the original file.
+
+Therefore, even without opening a new file, nginx can continue writing to the same file.
+
+### Problem 2 Countermeasure
+
+Use logrotate -f option to force rotation.
+`/usr/sbin/logrotate -v -f /home/logrotate.conf`
+
+### Problem 3 Countermeasure
+
+Set cron to execute at 0 0 * * *.
+
+### Idea
+
+Since using copytruncate doesn't require sending signals to processes, there's no need to rotate in the same container! Since we're using Kubernetes, let's use a cronjob to run logrotate and rotate other nginx apps too! That was the idea.
+
+### dockerfile
+
+I wanted logrotate to be executed by cronjob.
+
+```dockerfile showLineNumbers
+FROM alpine:3.14
+
+USER root
+RUN apk --update add --no-cache logrotate && \
+    rm -f /etc/logrotate.d/*
+ADD logrotate.conf /etc/logrotate.conf
+RUN chmod 0400 /etc/logrotate.conf
+
+CMD ["/usr/sbin/logrotate", "-v", "-f", "--state","/tmp/logrotate.status", "/etc/logrotate.conf"]
+```
+
+### configmap
+
+``` yaml showLineNumbers
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logrotate-config
+  namespace: wichan
+data:
+  nginx-logrotate.conf: |
+    /var/log/app/nginx/*/log/*.log {
+        daily
+        rotate 365
+        dateext
+        dateyesterday
+        missingok
+        compress
+        delaycompress
+        ifempty
+        copytruncate
+        endscript
+    }
+```
+
+### cronjob
+
+```yaml showLineNumbers
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: job-logrotate
+  namespace: wichan
+spec:
+  schedule: "0 0 * * *"
+  timeZone: Asia/Seoul
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: container
+              image: my-logrotate:latest
+              imagePullPolicy: Always
+              volumeMounts:
+                - name: logrotate-conf
+                  mountPath: /etc/logrotate.d
+                - name: nfs
+                  mountPath: /var/log/app
+                  subPath: App
+                - name: timezone
+                  mountPath: /etc/localtime
+          imagePullSecrets:
+            - name: ghcrsecret
+          volumes:
+            - name: logrotate-conf
+              configMap:
+                name: logrotate-config
+            - name: nfs
+              persistentVolumeClaim:
+                claimName: pvc-wichan
+            - name: timezone
+              hostPath:
+                path: /usr/share/zoneinfo/Asia/Seoul
+          restartPolicy: Never
+```
+
+With this, /var/log/app/nginx/*/log rotated well at 00:00 every day, and I thought it was successful.
+
+### New Problem
+
+One day, I noticed that the logs were full of null characters like ^@^@^@.
+
+When logrotate cuts up to the nth line while nginx is writing logs, nginx stacks the next log on the n+1th line, and at this time, lines 0 to n are replaced with null characters.
+
+## Third Attempt (Solved)
+
+I realized that sending a reopen signal to the nginx process is essential for a fundamental solution.
+
+However, when running with a logrotate container, since we can't access the nginx process, I abandoned the method using cronjob (2nd attempt).
+
+Returning to the 1st attempt, I checked why the nginx process couldn't reopen the file...
+-> It turned out that due to nfs mount, the nginx process didn't have permission to open the file.
+
+I tried to change the ownership of the nfs mounted directory to nginx, but nfs can't change ownership.
+So I changed the permission to 777, but an error occurred.
+
+> because parent directory has insecure permissions (It's world writable or writable by group which is not "root") Set "su" directive in config file to tell logrotate which user/group should be used for rotation.
+
+If the rotation directory has world-writable permissions, it fails rotation for security reasons.
+
+After countless troubleshooting... I set the nginx process to run with root privileges.
+
+```nginx showLineNumbers
+user  root; # here
+worker_processes  1;
+
+http {
+  ...
+}
+```
+
+## Final Solution
+
+```sh showLineNumbers
+# logrotate.conf
+/var/log/nginx/*.log {
+	daily
+	rotate 365
+	dateext
+	dateyesterday
+	missingok
+	compress
+	delaycompress
+	ifempty
+	sharedscripts
+	postrotate
+    if [ -f /var/run/nginx.pid ]; then
+      kill -USR1 `cat /var/run/nginx.pid`
+    fi
+	endscript
+}
+```
+
+```nginx showLineNumbers
+# nginx.conf
+user  root; # here
+worker_processes  1;
+
+error_log  /var/log/nginx/error.log notice;
+pid        /var/run/nginx.pid;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log  /var/log/nginx/access.log  main;
+
+    sendfile        on;
+
+    keepalive_timeout  65;
+
+    include /etc/nginx/conf.d/*.conf;
+}
+```
+
+```dockerfile showLineNumbers
+# Dockerfile
+FROM nginx:latest
+
+# Timezone setting
+RUN ln -snf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
+
+# Package installation
+RUN apt-get update
+RUN apt-get -y install logrotate cron
+
+# Build file copy
+COPY ./build /usr/share/nginx/html
+
+# nginx config copy
+RUN rm /etc/nginx/nginx.conf
+COPY ./nginx.conf /home/tmp/nginx.conf
+RUN tr -d '\r' < /home/tmp/nginx.conf > /etc/nginx/nginx.conf
+
+RUN rm /etc/nginx/conf.d/default.conf
+COPY ./default.conf /home/tmp/default.conf
+RUN tr -d '\r' < /home/tmp/default.conf > /etc/nginx/conf.d/default.conf
+
+# nginx-logrotate config copy
+COPY ./logrotate.conf /home/tmp/logrotate.conf
+RUN tr -d '\r' < /home/tmp/logrotate.conf > /home/logrotate.conf
+
+# logrotate cron file creation
+RUN echo "0 0 * * * /usr/sbin/logrotate -v -f /home/logrotate.conf" > /etc/cron.d/logrotate-nginx
+RUN chmod 0644 /etc/cron.d/logrotate-nginx
+
+# Register cron in crontab
+RUN crontab /etc/cron.d/logrotate-nginx
+
+EXPOSE 1020
+
+CMD ["sh", "-c", "cron && nginx -g 'daemon off;'"]
+```
+
+The key points are as follows:
+
+- Give nginx root privileges so it can write files to /var/log/nginx
+- Send reopen signal to nginx through postrotate script
+- Make rotation happen even without logrotate status file (or mount status to manage persistently)
+- Set cron to execute at 00:00
+
+## Side Note
+
+The requirement was for LogStash to be able to read nginx logs by date.
+I didn't know that something that seemed like nothing would be this frustrating.
+
+I hope this post helps someone whose name I don't know. Don't troubleshoot, my friend....

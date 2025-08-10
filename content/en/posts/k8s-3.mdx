@@ -1,0 +1,92 @@
+---
+title: Kubernetes - Deployment and Service
+description: New concepts have arrived
+date: 2023-05-09
+tags:
+  - MSA
+  - Kubernetes
+---
+# Deploying Pods with Deployment
+Deployment allows you to create Pods and define specifications such as image, env, port, etc. for those Pods.  
+You can also define the number of replicas to manage the number of Pods for HA.  
+Let's create one.  
+
+## Creating a deployment
+``` yaml
+vi nginx-deploy.yaml
+
+apiVersion: apps/v1
+kind: Deployment      # deployment > replicaset > pod
+metadata:
+  name: nginx-deployment       # deployment's name
+  labels:
+    app: nginx                 # labels can be attached to resources
+spec:                 # define deployment spec
+  replicas: 3         # create 3 replica pods
+  selector:           # method for deployment to find pods to manage
+    matchLabels:      # select pods with app=nginx label
+      app: nginx
+  template:                    # define meta, spec for pods to be created
+    metadata:
+      labels:
+        app: nginx             # attach app=nginx label to pod
+    spec:
+      containers:              # create one container
+      - name: nginx            # value of name field is nginx
+        image: nginx:latest    # use latest nginx image
+        ports:
+        - containerPort: 80    # specify container port
+```
+## Apply deployment to cluster
+Apply the deploy to the cluster.  
+``` sh
+kubectl apply -f nginx-deploy.yaml
+```
+
+## Check pod and deploy creation
+The deploy will be created, and 3 pods will be created according to the spec defined in the deploy.  
+``` sh
+kubectl get pods -A  
+kubectl get deploy -A  
+```
+
+# Making services accessible with Service
+When only Pods are created, the state where they can be accessed locally from that node is complete.  
+To make them accessible from outside, you can bundle those Pods with Service.  
+In the previous chapter, we allowed 0.0.0.0/0 Inbound ports with NodePort Service for ports 30000~32767, and now we'll use that.  
+
+## Creating a service
+``` yaml
+vi nginx-service.yaml
+
+apiVersion: v1
+kind: Service         # Service definition
+metadata:                      # set metadata for the Service
+  name: mynginxservice         # service name mynginxservice
+spec:
+  type: NodePort      # There are ClusterIP, LoadBalancer, NodePort (Ingress will be covered later)
+  ports:
+  - port: 8080        # pod ip:port
+    targetPort: 80    # app ip:targetPort
+    protocol: TCP     # 
+    name: http        # 
+  selector:
+    app: nginx        # bundle nginx pods with service
+```
+
+## Apply
+``` sh
+kubectl apply -f nginx-service.yaml
+```
+
+## Check service creation
+``` sh
+kubectl get service -A
+```
+
+## Actually access the nginx service  
+If you apply according to the yaml above, the NodePort will be set to a random number between 30000~32767.  
+Check the port with the service creation command, and you can access `{worker public ip}:{node port}` from any Worker node to call the nginx service.   
+
+I wondered if pods are created somewhere and if this would only call Pods on that Node.  
+This is because CoreDNS, a Kubernetes feature, automatically balances and calls Pods on each node when you call a Service.
