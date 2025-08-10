@@ -1,0 +1,57 @@
+---
+title: MSA Design and Implementation - 02
+description: Sharing project progress
+date: 2023-06-30
+tags:
+  - Architecture
+  - Kubernetes
+  - Docker
+  - MSA
+---
+## Overview
+As a follow-up to [MSA Design and Implementation - 01](https://wichan7.github.io/msa/msa-01/), I'm implementing a chatbot service.
+
+## Current Configuration
+
+Service Name|Description|GitHub
+---:|:---|:---:
+wic-api|Provides external integration functionality for the overall chatbot system|[Go to](https://github.com/wichan7/wic-api.git)
+wic-app|Login, dashboard, and overall admin interface|[Go to](https://github.com/wichan7/wic-app.git)
+wic-soe|Handles actual processing of the chatbot|-
+wic-chatbot|Receives processed results from soe and provides web service|-
+wic-mongo|Stores data that needs to be managed by the service|[Go to](https://github.com/wichan7/wic-mongo.git)
+wic-redis|Used for managing volatile data like sessions|[Go to](https://github.com/wichan7/wic-redis.git)
+wic-resources|Not a service, but registers yaml, images, etc.|[Go to](https://github.com/wichan7/wic-resources.git)
+
+## Progress
+### Current Status
+**Infrastructure Level**
+
+* Kubernetes cluster configured on 3 EC2 instances
+* Service, Deployment, Statefulset specified for app, api, mongo, redis
+
+**Service Level**
+
+Service Name|Description|Tech Stack
+---:|:---|---
+wic-api|Provides API for login, join|nodejs
+wic-app|Provides frontend and backend for login, join|nodejs, react
+wic-mongo|User collection implemented|mongo
+wic-redis|-|redis
+
+### To Do
+**Infrastructure Level**
+
+* Configure nginx-ingress
+* Configure mongo, redis HA
+* Implement auto-scaling
+
+**Service Level**
+
+Service Name|Description
+---:|:---
+wic-api|Apply JWT for login
+wic-app|Apply JWT for login, implement chatbot authoring interface
+wic-soe|Implement chatbot processing
+wic-chatbot|Implement chatbot user frontend
+wic-redis|Session management

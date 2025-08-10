@@ -1,0 +1,70 @@
+---
+title: Kubernetes概念整理
+description: 美しく抽象化されたKubernetesについて学ぼう！
+date: 2023-04-14
+tags:
+  - Kubernetes
+  - MSA
+---
+
+## 概要
+Kubernetes（以下k8s）はMSA実装と保守を容易にするツールである。
+小規模サービスの場合、Docker Compose、Docker Swarm...で複数のコンテナを管理するのに問題はなかったが、規模が大きくなるにつれて多くのコンテナを管理するのに困難が生じた。
+
+k8sは既存のオーケストレーションツールと異なり、'状態'という概念でサービスを管理する。
+Config yamlファイルに該当サービスが維持されるべき'状態'を定義し、k8sが該当状態が維持されるように管理するという...概念だけ聞いてもどのように動作するかよく分からないので、とりあえず進もう。
+
+## 構成を描いてみる
+<img src="/images/k8s/0414_k8s_diagram.png" />
+
+### 用語整理
+* k8s Cluster  
+  Master Node + Worker Node  
+
+* Node   
+  物理的なコンピューティング環境、AWSインスタンス別にそれぞれ分配しよう。
+
+* Master Node   
+  Workerノードを管理する。
+  Control Planeとも呼ばれるが、Master Nodeのapi serverを通じてadminがinterfaceするためにつけられた名前のようだ。
+
+* Worker Node   
+  Master Nodeから命令を受け取り、Podを管理・起動する。
+
+* Pod   
+  コンテナのグループ。コンテナを束ねて単一アプリケーションとして動作するように実装する。
+  
+### Master Node構成要素
+* kube api server   
+  クラスター内の構成要素に命令を伝達するインターフェースである。
+  adminはkubectl命令を通じてmaster nodeに命令できる。
+
+* controller manager   
+  'コントローラー'プロセスを実行する。
+  'コントローラー'プロセスはクラスターの状態を監視し、現在の状態を望ましい状態に移行させる。
+  
+* scheduler   
+  ノードが指定されていないpodを、どのノードに配置するのが良いかスケジューリングする。
+
+* etcd   
+  クラスター内の構成要素に関する情報がKey-Value形式で保存される。
+
+* Core-DNS   
+  クラスター内部で特定のドメインを探す必要がある時に活用されるDNS
+  （内部でもドメインを使用する場合があるようだ。workerノードにdomain nameを指定できるのか？）
+
+### Worker Node構成要素
+* kubelet   
+  機能1: kube api serverを通じて命令を受けるインターフェース。
+  機能2: Podが正常に動作するように監視。
+
+* kube-proxy   
+  すべてのノードでプロキシサービスを提供し、ネットワークルールを管理する。
+
+* pod   
+  コンテナのグループ。
+  各Podは異なるIPアドレスを分配され、Pod内のContainerは互いにlocalhostで参照できる。
+
+## 次にすること
+AWSインスタンスを3つ作り、1つをMaster、2つをWorkerとして指定してみよう。
+可能であればexpressで簡単なWASを作り、podをWorkerノードで動作させてみよう。

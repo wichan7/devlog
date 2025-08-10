@@ -1,0 +1,73 @@
+---
+title: Let's Learn About Kotlin
+description: They say it's better than Java?
+date: 2023-11-04
+tags:
+  - Kotlin
+---
+
+## What is Kotlin
+[Kotlin](https://kotlinlang.org/) is a language created by Jetbrains, the company famous for Intellij.
+Kotlin's catchphrase is `Concise. Cross‑platform. Fun`, which can be interpreted as a concise language that supports multiple platforms.
+
+### Does it support multiple platforms?
+Looking at Kotlin's official overview, `Kotlin Multiplatform` is introduced first.
+![kmp](/images/lang/kotlin/kotlin-multiplatform.svg)
+
+Among these, I found it unfamiliar that it's used in web development, so I looked into it. In fritz2, one of the Kotlin/JS frameworks, web code is written like this:
+``` kotlin showLineNumbers
+// fritz2
+fun main() {
+    render {
+        div("my-style-class") {
+            h2 {
+                +"Hello Peter!"
+            }
+        }
+    }
+}
+```
+(I'll use JS.)
+
+Getting back to the main point, through Kotlin Multiplatform, I learned that you can achieve multiple platform services with one language.
+The platforms that seem to be most used in actual projects are Android/iOS and Server (Spring).
+
+### Is it concise?
+As I'll introduce later, since Kotlin is ultimately converted to bytecode and executed by the JVM, it's often compared to Java code.
+``` java showLineNumbers
+// java
+function main() {
+    String name = "stranger";
+    System.out.println("Hi, " + name + "!");
+    System.out.print("Current count:");
+    for (int i=0; i<=10; i++) {
+        System.out.print(" " + Integer.toString(i));
+    }
+}
+```
+
+``` kotlin showLineNumbers
+// kotlin
+fun main() {
+    val name = "stranger"
+    println("Hi, $name!")
+    print("Current count:")
+    for (i in 0..10) {
+        print(" $i")
+    }
+}
+```
+
+You can see the conciseness compared to Java standard libraries that started with package names like System.out.
+
+## Kotlin's Build Process
+![kmp](/images/lang/kotlin/complie-process.png)
+JVM is a virtual machine for executing `*.class (bytecode)`.
+Java is converted to *.class files by the `Java Compiler`.
+
+Kotlin also uses JVM. Like Java, it's converted to *.class by the `Kotlin Compiler`.
+This *.class is loaded by JVM's class loader along with kotlin runtime, then converted to native code suitable for each operating system, and finally the program is executed.
+
+## Side Notes
+1. In the next post, let's install and use the Kotlin Compiler.
+2. Kotlin's native pronunciation is said to be 'Kotlin'.

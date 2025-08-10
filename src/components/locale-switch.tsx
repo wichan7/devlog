@@ -17,6 +17,7 @@ export function LocaleSwitch({ currentLocale }: LocaleSwitchProps) {
     segments[1] = newLocale
     router.push(segments.join("/"))
   }
+
   const handleClick = () => {
     const currentIndex = locales.findIndex((locale) => locale === currentLocale)
     const nextIndex = (currentIndex + 1) % locales.length
@@ -27,7 +28,7 @@ export function LocaleSwitch({ currentLocale }: LocaleSwitchProps) {
 
   return (
     <button
-      className="border rounded-md w-auto h-6 flex items-center justify-center gap-1"
+      className="border rounded-md w-auto h-6 flex items-center justify-center gap-1 pl-1 pr-1"
       onClick={handleClick}
     >
       <span className="sr-only">Toggle mode</span>

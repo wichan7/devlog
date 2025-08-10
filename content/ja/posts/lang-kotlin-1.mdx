@@ -1,0 +1,73 @@
+---
+title: コトリンについて学ぼう
+description: Javaより良いって？
+date: 2023-11-04
+tags:
+  - Kotlin
+---
+
+## コトリンとは
+[コトリン](https://kotlinlang.org/)はIntellijで有名なJetbrains社が作った言語である。
+コトリンのキャッチフレーズは`Concise. Cross‑platform. Fun`で、複数のプラットフォームをサポートする簡潔な言語程度に解釈できる。
+
+### 複数のプラットフォームをサポートするか？
+コトリン公式サイトの概要を見ると、`Kotlin Multiplatform`が一番最初に紹介される。
+![kmp](/images/lang/kotlin/kotlin-multiplatform.svg)
+
+この中で、Web開発で使用するというのが珍しくて調べてみたが、Kotlin/JSフレームワークの一つであるfritz2では以下のようにWebコードを書く。
+``` kotlin showLineNumbers
+// fritz2
+fun main() {
+    render {
+        div("my-style-class") {
+            h2 {
+                +"Hello Peter!"
+            }
+        }
+    }
+}
+```
+（私はJSを使います。）
+
+本論に戻って、Kotlin Multiplatformによって一つの言語で、複数のプラットフォームサービスを達成できることを知った。
+実際のプロジェクトでよく使用されるプラットフォームはAndroid/iOS、Server（Spring）程度に見える。
+
+### 簡潔か？
+後で紹介するが、Kotlinは最終的にバイトコードに変換されてJVMによって実行されるので、Javaコードとよく比較する。
+``` java showLineNumbers
+// java
+function main() {
+    String name = "stranger";
+    System.out.println("Hi, " + name + "!");
+    System.out.print("Current count:");
+    for (int i=0; i<=10; i++) {
+        System.out.print(" " + Integer.toString(i));
+    }
+}
+```
+
+``` kotlin showLineNumbers
+// kotlin
+fun main() {
+    val name = "stranger"
+    println("Hi, $name!")
+    print("Current count:")
+    for (i in 0..10) {
+        print(" $i")
+    }
+}
+```
+
+System.outなどのパッケージ名から始まっていたJava標準ライブラリに比べて簡潔さが見える。
+
+## コトリンのビルド過程
+![kmp](/images/lang/kotlin/complie-process.png)
+JVMは`*.class（バイトコード）`を実行するための仮想マシンである。
+Javaは`Java Compiler`によって*.classファイルに変換される。
+
+KotlinもJVMを使用する。Javaと同様に`Kotlin Compiler`によって*.classに変換される。
+この*.classはJVMのclass loaderによってkotlin runtimeと一緒にロードされた後、各オペレーティングシステムに適合するネイティブコードに変換されて最終的にプログラムが実行される。
+
+## 余談
+1. 次のポスティングではKotlin Compilerをインストールして使用してみよう。
+2. Kotlinのネイティブらしい発音は'コトリン'だという。

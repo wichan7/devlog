@@ -1,0 +1,34 @@
+---
+title: MSA Design and Implementation - 01
+description: I designed the MSA project that I will be working on
+date: 2023-05-13
+tags:
+  - Architecture
+  - Kubernetes
+  - Docker
+  - MSA
+---
+# System Configuration
+I drew a system configuration diagram for what I'm aiming for.
+
+## k8s Configuration
+![structure](/images/k8s/0513_k8s-archi1.png)
+
+It consists of a total of 3 nodes, with 2 workers where the actual apps run.
+The app and api configurations are clear, but the DB server configuration was unclear because I was wondering if it's appropriate to run a DB server that needs to be stateful on k8s, which is specialized for providing stateless services.
+
+Therefore, I plan to set taints so that it doesn't receive k8s failure recovery or scheduling, and use the replica functionality provided by MongoDB for backup and HA configuration.
+
+## Configuration Based on Ingress
+![structure](/images/k8s/0513_k8s-archi2.png)
+
+Users are ingress-ed to /app, /api paths by nginx-ingress, and app and api will each have 2 replicas created for HA configuration.
+At this time, the unique point is that when the WAS expressed as 'app' performs DB queries or business logic processing, it always requests to the api server.
+This configuration enables API provision to 3rd party apps and will help create an extensible configuration where even if a new-app is created later, it won't depend on the existing old-app.
+
+# What to Do Next
+1. I will implement app and api servers with express while studying k8s in parallel.
+2. Let's clearly understand the concept and implementation of mongo replication.
+
+appendix.
+If I get the chance, I want to apply front-end libraries like React while developing the app.

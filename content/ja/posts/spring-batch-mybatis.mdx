@@ -1,0 +1,114 @@
+---
+title: Spring Batch、メタテーブルDB分離とdatasource設定
+description: きれいなDB構成のために！
+date: 2024-07-13
+tags:
+  - Spring
+  - Batch
+  - Mybatis
+---
+
+## 目標
+
+スプリングバッチを使用すると、バッチがいつ、どこまで完了したかなどのメタ情報を管理するテーブルが作成される。  
+このメタテーブルをサービスと異なるDBに作成し、バッチサーバーはサービスにもアクセス可能であるように設定したいと思った。
+
+## 要約
+
+1. dataSource設定をmybatis dataSource、batch dataSourceに分離
+2. mybatisがmybatis用dataSourceを使用するように設定
+
+## 内容
+
+### 1. dataSource設定
+
+application.ymlでは複数のdatasource設定をサポートしていない。  
+そのため、@Configurationを通じて直接datasourceビーンを注入する。
+
+```yaml showLineNumbers
+# application.yml
+spring:
+  application:
+    name: my-batch
+  batch:
+    jdbc:
+      initialize-schema: never
+    job:
+      name: ${job.name:NONE}
+  datasource:
+    batch:
+      jdbc-url: jdbc:mysql://{batch-database-uri}/batch
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      username: batch
+      password: batch123
+    service:
+      jdbc-url: jdbc:mysql://{service-database-uri}/service
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      username: service
+      password: service123
+```
+
+```java showLineNumbers
+// com.dev.wichan.config.DataSourceConfig
+@Configuration
+public class DataSourceCOnfig {
+
+  @Bean
+  @Primary
+  @ConfigurationProperties(prefix="spring.datasource.batch")
+  public HikariConfig batchHikariConfig() {
+      return new HikariConfig();
+  }
+
+  // スプリング基本データソースとして使用するbatchDatasource作成
+  @Bean
+  @Primary
+  @Qualifier("batchDataSource")
+  public DataSource batchDataSource() {
+      return new HikariDataSource(batchHikariConfig());
+  }
+
+  @Bean
+  @ConfigurationProperties(prefix="spring.datasource.service")
+  public HikariConfig serviceHikariConfig() {
+      return new HikariConfig();
+  }
+
+  // Mybatisで使用するserviceDataSourceビーン作成
+  @Bean
+  @Qualifier("serviceDataSource")
+  public DataSource serviceDataSource() {
+      return new HikariDataSource(serviceHikariConfig());
+  }
+}
+```
+
+### 2. Mybatis Datasource変更
+
+Qualifierアノテーションでマイバティスで使用するデータソース指定
+
+```java showLineNumbers
+// com.dev.wichan.config.MyBatisConfig
+@Configuration
+public class MybatisConfig {
+
+  @Primary
+  @Bean
+  public SqlSessionFactory sqlSessionFactory (
+    @Qualifier("serviceDataSource") DataSource dataSource,
+    ApplicationContext applicationContext
+  ) throws Exception {
+    SqlSessionFactoryBean sessionFactoryBean = new SqlSessionFactoryBean();
+    sessionFactoryBean.setDataSource(dataSource);
+    sessionFactoryBean.setMapperLocations(applicationContext.getResources("classpath:mapper/**/*.xml"));
+
+    org.apache.ibatis.session.Configuration mybatisConfig = new org.apache.ibatis.session.Configuration();
+    mybatisConfig.setMapUnderscoreToCamelCase(true);
+    mybatisConfig.setDefaultExecutorType(ExecutorType.BATCH);
+
+    sessionFactoryBean.setConfiguration(mybatisConfig);
+    return sessionFactoryBean.getObject();
+  }
+
+}
+```

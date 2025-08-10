@@ -1,0 +1,94 @@
+---
+title: クubernetes - DBをポッドで？
+date: 2023-05-20
+tags:
+  - MSA
+  - Kubernetes
+  - DB
+---
+
+## DBをクubernetesで使用するにはどうすればよいか？
+コンテナは再起動時に、再起動前のデータが保持されない。  
+そのため、データベースのようにStatefulである必要があるサービスの場合、ボリュームを外部ファイルシステムにマウントして状態を維持することができる。  
+
+### ドッカーでのコンテナボリュームマウント
+ドッカーでは `-v {外部ボリューム}:{コンテナ内の内部ボリューム}` の形式でコンテナ実行時にマウントするボリュームを指定できる。
+```
+docker run --name {name} -v {外部ボリューム}:{コンテナ内ボリューム} -d -p {ext port}:{int port} {image}:{version}
+
+例) docker run --name mongo -v C:\\mongo-mount:/data/db -d -p 27017:27017 wichan-mongo:0.0.2
+```  
+
+この場合、コンテナが終了しても、再起動時にmountパスを参照するようにすれば、継続してサービス可能なため適切である。  
+
+### k8sでのポッド（コンテナ）ボリュームマウント
+k8sも結局はcontainerを起動するツールであるため、ノードにポッドのボリュームをマウントして状態を維持することができる。  
+ただし、replicaset機能を使用する場合は追加的な考慮が必要である。  
+同じボリュームをマウントするreplicaが複数作成される場合、衝突が発生する。  
+
+参照1: https://bcho.tistory.com/1306  
+参照2: https://velog.io/@hoonki/%EC%BF%A0%EB%B2%84%EB%84%A4%ED%8B%B0%EC%8A%A4k8s-Persistent-Storage%EB%9E%80
+
+## k8sでDBデプロイを試してみよう
+参照: https://zzsza.github.io/development/2019/01/27/kubernetes-statefulset/  
+
+### Deploymentで登録してみる
+``` yaml
+apiVersion: apps/v1
+kind: Deployment      # deployment > replicaset > pod
+metadata:
+  name: mongo-deployment       # deploymentの名前
+  labels:
+    app: mongo                 # リソースにラベルを付けることができる
+spec:                 # deploymentのspec定義
+  replicas: 4         # 4つのレプリカポッド作成
+  selector:           # デプロイメントが管理するポッドを見つける方法
+    matchLabels:      # podの中からapp=mongoラベルを持つポッドを選択
+      app: mongo
+  template:                    # 作成されるpodのmeta、specを定義
+    metadata:
+      labels:
+        app: mongo             # podにapp=mongoラベルを付ける
+    spec:
+      containers:              # コンテナを1つ作成
+      - name: mongo            # nameフィールドの値mongo
+        image: mongo:latest    # 最新のmongoイメージを使用
+        ports:
+        - containerPort: 27017    # コンテナポート指定
+```
+```
+kubectl apply -f mongo-deployment.yaml
+```
+![structure](/images/k8s/0522_pods.png)  
+
+### Statefulsetで登録してみる
+statefulsetでmongoポッドを作成してみよう。   
+``` yaml
+kind: StatefulSet         # statefulset作成
+apiVersion: apps/v1       # statefulsetはapps/v1からサポート
+metadata:                 # sfsのmetadata指定
+  name: mongo-primary-0   # sfs名前、ただしpod作成時は{sfs名}-{番号}でネーミングされる
+spec:                     # sfsのspecを指定
+  replicas: 1             # レプリカ数を指定
+  selector:               # ポッドをマッピングするセレクターを指定
+    matchLabels:
+      app: mongo-primary
+  template:               
+    metadata:             # podのmetadata指定
+      labels:
+        app: mongo-primary
+    spec:                 # podのspecを指定
+      volumes:
+        - name: mongodata # mongodataという名前のボリュームを探してノードの/app/mongoにマウント
+          hostPath:
+            path: /app/mongo
+      containers:
+        - name: mongo-primary-container
+          image: mongo:latest
+          ports:
+            - containerPort: 27017
+              protocol: TCP
+          volumeMounts:
+            - name: mongodata
+              mountPath: /data/db         # ポッドの/data/dbをmongodataという名前で指定
+```

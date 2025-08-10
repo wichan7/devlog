@@ -1,0 +1,66 @@
+---
+title: JPQLとNative Query
+description: JPAと一緒によく使用するORMライブラリ
+date: 2023-08-22
+tags:
+  - Web
+  - ORM
+  - Spring
+---
+
+## JPQL概要
+JPAを使用していると、JPAだけでは簡単に解決できない照会が必要になった。
+JPQLはSQLを抽象化して`SQLのように見える`Query Languageである。
+
+## JPQLを使用する
+Repositoryクラスで`@Query`アノテーションを使用する。
+``` java showLineNumbers
+// BoardRepository.java ...
+@Query(value="SELECT b FROM Board b")
+List<Board> findAllBy();
+```
+
+## 問題状況1
+JPQL使用中にFROM節サブクエリを使用しようとしたが、JPQLはFROMサブクエリをサポートしていないという。
+推奨はしないが、`nativeQuery`オプションで抽象化されていないSQLを直接使用できる。
+
+## 解決：Native Queryを使用してみる
+``` java showLineNumbers
+// BoardRepository.java ...
+@Query(value="SELECT board_id, created_at, nickname, title, views, writer "
+    + "FROM ( "
+    + "  SELECT * "
+    + "  FROM board "
+    + "  WHERE TIMESTAMPDIFF(HOUR, created_at, NOW()) < 25 "
+    + ") board "
+    + "ORDER BY views DESC "
+    + "LIMIT 5;", nativeQuery=true)
+List<BoardListMapping> findDailyTop();
+```
+これで解決かと思った。
+
+## 問題状況2
+findDailyTop()でデータを照会したところ、board_id、created_atカラムのデータがnullとして照会された。
+
+調べてみると、JPQLはnativeQueryのsnake_caseをcamelCaseに変換してくれなかった。
+したがって、boardId、createdAtなどと定義されたエンティティカラムが照会されなかったのである。
+
+それでは...
+
+## 解決：aliasを使用する
+``` java showLineNumbers
+@Query(value="SELECT board_id AS 'boardId', created_at AS 'createdAt', nickname, title, views, writer "
+    + "FROM ( "
+    + "  SELECT * "
+    + "  FROM board "
+    + "  WHERE TIMESTAMPDIFF(HOUR, created_at, NOW()) < 25 "
+    + ") board "
+    + "ORDER BY views DESC "
+    + "LIMIT 5;", nativeQuery=true)
+List<BoardListMapping> findDailyTop();
+```
+照会クエリにAliasを与えて、board_idをboardIdに変換して解決した。
+
+## 余談
+JPA、JPQLは抽象化されており、どのDatabaseにも移植可能であることが利点だが、nativeQueryが含まれる瞬間、柔軟性が低下する。
+Native Queryを使用しない他の方法を考えてみよう。

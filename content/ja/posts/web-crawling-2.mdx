@@ -1,0 +1,117 @@
+---
+title: Puppeteerウェブクローラー作成 - 2
+description: 直接実装してみる
+date: 2023-09-17
+tags:
+  - Web
+  - Crawling
+---
+## 概要
+[👉 ウェブクローラー作成 - 1 すぐに移動](https://wichan7.github.io/web/web-crawling-1/)  
+
+Puppeteer、Cheerioモジュールを活用して、ウェブページからメールアドレスを収集するクローリングボットを構成した。  
+`Trigger Page`からメールアドレスを収集し、`<a href=...>`を探索して重複なく訪問する。  
+
+## モジュールドキュメント
+[👉 Puppeteer Documentation](https://pptr.dev/)  
+[👉 Cheerio](https://cheerio.js.org/docs/intro)  
+
+## ソースコード
+``` javascript showLineNumbers
+// crawl.js
+// 3rd party declaration
+import * as puppeteer from 'puppeteer';
+import * as cheerio from 'cheerio';
+// own libraries declaration
+import Queue from './queue.js';
+
+/**
+ * Concept:
+ *  1. visitQueueからurl dequeue
+ *  2. url訪問
+ *  3. メールアドレスリスト抽出
+ *  4. href抽出、visitQueueにenqueue
+ *  6. 1 ~ 4 繰り返し
+ */
+(async() => {
+    const emails = new Set();
+    const histories = new Set();
+    const visitQueue = new Queue();
+
+    const browser = await puppeteer.launch();
+    const workPage = await browser.newPage();
+
+    // Trigger Page設定
+    visitQueue.enqueue("https://www.naver.com");
+    while (!visitQueue.isEmpty()) {
+        // 1.
+        const url = visitQueue.dequeue();
+        // 2.
+        await workPage.goto(url);
+        // 3.
+        const $ = cheerio.load(await workPage.content());
+        for (let email of extractEmails($)) {
+            emails.add(email);
+        }
+        // 4.
+        for (let href of validateHrefs(extractHrefs($), histories)) {
+            visitQueue.enqueue(href);
+        }
+        // logging
+        console.log(emails);
+    }
+})();
+
+function extractEmails($) {
+    /**
+     * RFC2822 Email Validation
+     */
+    return $('body').text().match(/[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/g) || [];
+}
+
+function extractHrefs($) {
+    const hrefs = [];
+
+    $('a').each( (i, a) => {
+        const href = $(a).attr('href') || "";
+        if (href.startsWith("https://") || href.startsWith("http://")) {
+            hrefs.push(href);
+        }
+    } );
+
+    return hrefs;
+}
+
+function validateHrefs(hrefs, histories) {
+    return hrefs.filter( href => !histories.has(href) )
+}
+
+async function wait(seconds) {
+    return new Promise( resolve => setTimeout(resolve, seconds * 1000) )
+}
+```
+
+``` javascript showLineNumbers
+// queue.js
+export default class Queue {
+    constructor() {
+        this.arr = []
+    }
+
+    enqueue(element) {
+        this.arr.push(element)
+    }
+
+    dequeue() {
+        return this.arr.shift()
+    }
+
+    isEmpty() {
+        return this.arr.length === 0 ? true : false
+    }
+}
+```
+
+## 改善方向
+1. Query、Path Parameterに対するtrim後、重複チェックを実行しなければ、意味のないページに重複訪問しない。（Canonical Tagを活用すればよいかも？）  
+2. hrefにFull URLではなく、`'/path'`、`'./path'`などパスが入ってくる場合は破棄しているが、baseUrlを取得できれば、pathとbase_urlの合成が可能である。

@@ -1,0 +1,50 @@
+---
+title: Auto-reload After Thymeleaf Source Changes
+description: Let's set up spring-devtools together and develop comfortably
+date: 2023-08-16
+tags:
+  - Web
+  - Spring
+---
+
+## Overview
+While implementing CRUD with Spring Boot, I modified Thymeleaf code (.html), but it wasn't reflected immediately and I had to restart to see the changes.  
+Why aren't the changes reflected right away?
+
+## Reason
+Thymeleaf caches rendered pages for performance improvement.  
+And even if the template is changed, it doesn't reload, so even when you modify the template, the changes aren't reflected immediately.
+
+## What to do?
+In development, you can disable Thymeleaf's cache option.  
+Add the following property to `application.yml`.  
+``` yaml showLineNumbers
+spring:
+  thymeleaf:
+    cache: false
+```
+
+## DevTools Introduction
+While we're at it, let's make it detect Java source changes and rebuild automatically.  
+Spring Boot provides a great library called 'devtools'.
+
+## DevTools Installation
+### Add gradle dependency
+``` gradle showLineNumbers
+dependencies {
+  compileOnly 'org.springframework.boot:spring-boot-devtools'
+}
+```
+
+### Modify application.yml
+``` yaml showLineNumbers
+spring:
+  devtools:
+    livereload:
+      enabled: true
+    restart:
+      enabled: true
+```
+
+## Eclipse Settings Change
+Enable `Project > Build Automatically` in the Eclipse top toolbar.

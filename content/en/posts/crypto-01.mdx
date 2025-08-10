@@ -1,0 +1,60 @@
+---
+title: Cryptography - Ciphertext, Masking, Hash
+description: Encryption and hashing that I write because I get confused
+date: 2023-06-03
+tags:
+  - Crypto
+---
+
+I want to organize the cryptography unit I learned while studying for the information security engineer exam before I forget it.
+
+# What is Cryptography
+> Linguistic and mathematical methodologies for protecting information (wikipedia says)
+
+In any field, you learn the history of that discipline in the overview stage.
+When learning computer history in computer introduction, I slept on the desk, but cryptography history is about the fierce brain battles of geniuses, so it feels like reading an interesting novel.
+
+However, what I want to organize today is not the history of cryptography, but the theoretical and practical aspects of cryptography.
+If you're curious about the history related to cryptographic technology, check out the [article](https://seed.kisa.or.kr/kisa/intro/EgovHistory.do) written by KISA.
+
+# Plaintext and Ciphertext
+Plaintext is the original message before encryption occurs, and ciphertext is the message after plaintext has been encrypted by something.
+In cryptography, plaintext is abbreviated as **P** (Plain Text) ~~PyoungMoon~~, and ciphertext is abbreviated as **C** (Cipher Text).
+
+# Confusion and Diffusion
+'Confusion' and 'diffusion' are essential for encryption.
+Confusion is hiding the correlation between ciphertext and plaintext.
+Diffusion is spreading statistical properties throughout the ciphertext to hide them.
+What does this mean?
+
+Let's say P = **'I LOVE JIAE SEO'**.
+I changed this plaintext to **'I LOVA JIEA SAO'**.
+If you look carefully, I changed E to A and A to E. Like this, you can implement **confusion** by changing the plaintext.
+
+Again, let's say P = **'I LOVE JIAE SEO'**.
+I changed this plaintext to **'I EVOL EAIJ OES'**.
+If you look carefully, I changed the spelling order of each word. Like this, you can implement **diffusion** by changing the position of plaintext.
+
+This is also the concept of **substitution** and **transposition** that frequently appear in cryptography.
+Substitution is among the methods to implement confusion, and transposition is among the methods to implement diffusion.
+
+# Encryption and Hashing
+Regarding encryption and hashing, there's something people get confused about if they haven't learned it.
+It's the difference between encryption and hashing.
+
+## Encryption (Two-way encryption)
+The key to encryption is that others can't understand it, but I can.
+The original data must be provided timely and intact through the decryption process.
+
+## Hashing (One-way encryption)
+The key to hashing is that neither others nor I can understand it.
+Let's say there are plaintext1 and plaintext2. When these two plaintexts go through the process called hashing, result1 and result2 are generated.
+
+In this case, neither you nor I nor anyone can recover the original data, but since the two hashing results are different, we can know that **original 1 and original 2 are different**. (assuming no hash collision occurs)
+
+Utilizing the characteristic that the original cannot be recovered but can only be distinguished, it's often used when servers store passwords by going through a hashing process, and then verify during login whether the password is correct or incorrect.
+
+## Masking
+The key to masking is that neither others, nor I, nor even Jesus can understand it.
+If I mask the plaintext 'I LOVE JIAE SEO' with * characters, the result is '***************'.
+Even Jesus can't understand this.

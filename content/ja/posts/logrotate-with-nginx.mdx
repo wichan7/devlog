@@ -1,0 +1,321 @@
+---
+title: nginx logrotate トラブルシューティング
+description: なぜこんなに時間がかかったのか...
+date: 2024-09-01
+tags:
+  - Web
+  - Kubernetes
+  - Nginx
+  - Logrotate
+---
+
+## 概要
+
+仕事中、nginxのaccess logを日付別に管理する必要があった。
+簡単だと思っていたが、トラブルシューティングが多かった。トラブルシューティングの過程と解決策を紹介する。
+
+忙しい人は結論だけ見ろ。
+
+## 環境
+
+- Azure Managed Kubernetes
+- nfsでマウントされたPV
+- /var/log/nginxマウント
+- nginx: 1.27.1
+
+## 最初の試行（失敗）
+
+インターネットで調べてみると、Linuxでlogrotateパッケージを使用する例が多かった。
+
+要点は以下の通りである：
+
+1. logrotateは単純にファイル名を変更するパッケージである。
+   スケジューリング機能がないので、cronをインストールして毎日logrotateが実行されるように設定する。
+
+2. cronがlogrotateを実行すると、access.logファイルがaccess.log-yyyymmddに名前が変わる。
+
+3. logrotateは単純にファイル名を変更するだけなので、nginxは名前が変わったファイルにログを書き続ける。新しいaccess.logを作成したいので、`kill -USR1`コマンドでnginxにシグナルを送ってファイルを再オープンするようにする。
+
+```dockerfile showLineNumbers
+# dockerfile
+FROM nginx:1.27.1
+
+RUN apt-get install -y logrotate cron
+COPY ./logrotate.conf /etc/logrotate.conf
+
+RUN sh -c cron && nginx -g 'daemon off'
+```
+
+```sh showLineNumbers
+# logrotate.conf
+/var/log/nginx/*.log {
+	daily
+	rotate 365
+	dateext
+	dateyesterday
+	missingok
+	compress
+	delaycompress
+	ifempty
+	sharedscripts
+	postrotate
+      if [ -f /var/run/nginx.pid ]; then
+        kill -USR1 `cat /var/run/nginx.pid`
+      fi
+	endscript
+}
+```
+
+このように実装したとき、問題があった：
+
+1. access.log-yyyymmddファイルにログを記録し続けた。
+   -> nginxがファイルを再オープンしない...当時はなぜかわからなかった。
+2. コンテナ再起動後、初日にはlogrotateが実行されなかった。
+   -> logrotateは`/var/lib/logrotate/status`に最後のローテーション時間を記録するが、初日（コンテナ再起動後）にはファイルが存在しないので、ローテーションが発生しない。
+3. 00:00に実行されたかったが、06:25に実行された。
+   -> cron.dailyのデフォルト実行時間は06:25である...
+
+## 2番目の試行（解決されたと思ったが失敗）
+
+### 問題1対策
+
+原因を特定できず、nginxがファイルを再オープンしなくてもローテーションが発生するように、logrotateのcopytruncateオプションを使用してみた。
+以前の方法は書き込み中のファイルの名前を変更することであった。copytruncateは新しいファイルを作成し、ログの内容を新しいファイルにコピーする。その後、元のファイルからその分の履歴を削除する。
+
+したがって、新しいファイルを開かなくても、nginxは同じファイルに書き込み続けることができる。
+
+### 問題2対策
+
+logrotate -fオプションを使用して強制ローテーションを行う。
+`/usr/sbin/logrotate -v -f /home/logrotate.conf`
+
+### 問題3対策
+
+cronを0 0 * * *に設定して実行する。
+
+### アイデア
+
+copytruncateを使用するとプロセスにシグナルを送る必要がないので、同じコンテナでローテーションする必要がない！Kubernetesを使用しているので、cronjobを使用してlogrotateを実行し、他のnginxアプリもローテーションさせよう！それがアイデアであった。
+
+### dockerfile
+
+logrotateがcronjobによって実行されることを望んだ。
+
+```dockerfile showLineNumbers
+FROM alpine:3.14
+
+USER root
+RUN apk --update add --no-cache logrotate && \
+    rm -f /etc/logrotate.d/*
+ADD logrotate.conf /etc/logrotate.conf
+RUN chmod 0400 /etc/logrotate.conf
+
+CMD ["/usr/sbin/logrotate", "-v", "-f", "--state","/tmp/logrotate.status", "/etc/logrotate.conf"]
+```
+
+### configmap
+
+``` yaml showLineNumbers
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logrotate-config
+  namespace: wichan
+data:
+  nginx-logrotate.conf: |
+    /var/log/app/nginx/*/log/*.log {
+        daily
+        rotate 365
+        dateext
+        dateyesterday
+        missingok
+        compress
+        delaycompress
+        ifempty
+        copytruncate
+        endscript
+    }
+```
+
+### cronjob
+
+```yaml showLineNumbers
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: job-logrotate
+  namespace: wichan
+spec:
+  schedule: "0 0 * * *"
+  timeZone: Asia/Seoul
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: container
+              image: my-logrotate:latest
+              imagePullPolicy: Always
+              volumeMounts:
+                - name: logrotate-conf
+                  mountPath: /etc/logrotate.d
+                - name: nfs
+                  mountPath: /var/log/app
+                  subPath: App
+                - name: timezone
+                  mountPath: /etc/localtime
+          imagePullSecrets:
+            - name: ghcrsecret
+          volumes:
+            - name: logrotate-conf
+              configMap:
+                name: logrotate-config
+            - name: nfs
+              persistentVolumeClaim:
+                claimName: pvc-wichan
+            - name: timezone
+              hostPath:
+                path: /usr/share/zoneinfo/Asia/Seoul
+          restartPolicy: Never
+```
+
+これで、/var/log/app/nginx/*/logが毎日00:00によくローテーションされ、成功したと思った。
+
+### 新しい問題
+
+ある日、ログが^@^@^@のようなnull文字でいっぱいになっていることに気づいた。
+
+logrotateがnginxがログを書き込んでいる間にn行目まで切ると、nginxはn+1行目に次のログを積み重ねるが、このとき0行目からn行目までがnull文字で置き換えられる。
+
+## 3番目の試行（解決）
+
+nginxプロセスにファイル再オープンシグナルを送ることが根本的な解決策であることを悟った。
+
+しかし、logrotateコンテナで実行すると、nginxプロセスにアクセスできないので、cronjobを使用する方法（2番目の試行）を放棄した。
+
+1番目の試行に戻って、nginxプロセスがファイルを再オープンできない理由を確認した...
+-> nfsマウントにより、nginxプロセスがファイルを開く権限がなかった。
+
+nfsマウントされたディレクトリの所有権をnginxに変更しようとしたが、nfsは所有権を変更できない。
+そこで権限を777に変更したが、エラーが発生した。
+
+> because parent directory has insecure permissions (It's world writable or writable by group which is not "root") Set "su" directive in config file to tell logrotate which user/group should be used for rotation.
+
+ローテーションディレクトリがworld-writable権限を持っていると、セキュリティ上の理由でローテーションが失敗する。
+
+無数のトラブルシューティングの後...nginxプロセスをroot権限で実行するように設定した。
+
+```nginx showLineNumbers
+user  root; # ここ
+worker_processes  1;
+
+http {
+  ...
+}
+```
+
+## 最終解決策
+
+```sh showLineNumbers
+# logrotate.conf
+/var/log/nginx/*.log {
+	daily
+	rotate 365
+	dateext
+	dateyesterday
+	missingok
+	compress
+	delaycompress
+	ifempty
+	sharedscripts
+	postrotate
+    if [ -f /var/run/nginx.pid ]; then
+      kill -USR1 `cat /var/run/nginx.pid`
+    fi
+	endscript
+}
+```
+
+```nginx showLineNumbers
+# nginx.conf
+user  root; # ここ
+worker_processes  1;
+
+error_log  /var/log/nginx/error.log notice;
+pid        /var/run/nginx.pid;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log  /var/log/nginx/access.log  main;
+
+    sendfile        on;
+
+    keepalive_timeout  65;
+
+    include /etc/nginx/conf.d/*.conf;
+}
+```
+
+```dockerfile showLineNumbers
+# Dockerfile
+FROM nginx:latest
+
+# タイムゾーン設定
+RUN ln -snf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
+
+# パッケージインストール
+RUN apt-get update
+RUN apt-get -y install logrotate cron
+
+# ビルドファイルコピー
+COPY ./build /usr/share/nginx/html
+
+# nginx設定コピー
+RUN rm /etc/nginx/nginx.conf
+COPY ./nginx.conf /home/tmp/nginx.conf
+RUN tr -d '\r' < /home/tmp/nginx.conf > /etc/nginx/nginx.conf
+
+RUN rm /etc/nginx/conf.d/default.conf
+COPY ./default.conf /home/tmp/default.conf
+RUN tr -d '\r' < /home/tmp/default.conf > /etc/nginx/conf.d/default.conf
+
+# nginx-logrotate設定コピー
+COPY ./logrotate.conf /home/tmp/logrotate.conf
+RUN tr -d '\r' < /home/tmp/logrotate.conf > /home/logrotate.conf
+
+# logrotate cronファイル作成
+RUN echo "0 0 * * * /usr/sbin/logrotate -v -f /home/logrotate.conf" > /etc/cron.d/logrotate-nginx
+RUN chmod 0644 /etc/cron.d/logrotate-nginx
+
+# crontabにcron登録
+RUN crontab /etc/cron.d/logrotate-nginx
+
+EXPOSE 1020
+
+CMD ["sh", "-c", "cron && nginx -g 'daemon off;'"]
+```
+
+重要なポイントは以下の通りである：
+
+- nginxにroot権限を与えて、/var/log/nginxにファイルを書き込めるようにする
+- postrotateスクリプトを通じてnginxにファイル再オープンシグナルを送る
+- logrotate statusファイルがなくてもローテーションが発生するようにする（または状態を永続的に管理するためにマウントする）
+- cronを00:00に実行されるように設定する
+
+## 余談
+
+要件は、LogStashが日付別にnginxログを読み取れるようにすることであった。
+何でもないことのように見えたが、こんなにイライラするとは知らなかった。
+
+この記事を読む誰かに役立つことを願う。トラブルシューティングするな、友よ....

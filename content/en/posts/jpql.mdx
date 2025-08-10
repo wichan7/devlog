@@ -1,0 +1,66 @@
+---
+title: JPQL and Native Query
+description: ORM library commonly used with JPA
+date: 2023-08-22
+tags:
+  - Web
+  - ORM
+  - Spring
+---
+
+## JPQL Overview
+While using JPA, I needed queries that couldn't be easily resolved with JPA alone.
+JPQL is a Query Language that abstracts SQL to look `like SQL`.
+
+## Using JPQL
+Use it with the `@Query` annotation in the Repository class.
+``` java showLineNumbers
+// BoardRepository.java ...
+@Query(value="SELECT b FROM Board b")
+List<Board> findAllBy();
+```
+
+## Problem Situation 1
+While using JPQL, I tried to use a FROM clause subquery, but JPQL doesn't support FROM subqueries.
+Although not recommended, you can use unabstracted SQL directly with the `nativeQuery` option.
+
+## Solution: Using Native Query
+``` java showLineNumbers
+// BoardRepository.java ...
+@Query(value="SELECT board_id, created_at, nickname, title, views, writer "
+    + "FROM ( "
+    + "  SELECT * "
+    + "  FROM board "
+    + "  WHERE TIMESTAMPDIFF(HOUR, created_at, NOW()) < 25 "
+    + ") board "
+    + "ORDER BY views DESC "
+    + "LIMIT 5;", nativeQuery=true)
+List<BoardListMapping> findDailyTop();
+```
+I thought this would solve it.
+
+## Problem Situation 2
+When I queried data with findDailyTop(), the board_id and created_at column data were retrieved as null.
+
+After investigating, I found that JPQL doesn't convert snake_case from nativeQuery to camelCase.
+Therefore, entity columns defined as boardId, createdAt, etc., were not being retrieved.
+
+So then...
+
+## Solution: Using Alias
+``` java showLineNumbers
+@Query(value="SELECT board_id AS 'boardId', created_at AS 'createdAt', nickname, title, views, writer "
+    + "FROM ( "
+    + "  SELECT * "
+    + "  FROM board "
+    + "  WHERE TIMESTAMPDIFF(HOUR, created_at, NOW()) < 25 "
+    + ") board "
+    + "ORDER BY views DESC "
+    + "LIMIT 5;", nativeQuery=true)
+List<BoardListMapping> findDailyTop();
+```
+I solved it by giving an alias to the query, converting board_id to boardId.
+
+## Side Note
+JPA and JPQL are abstracted, which is an advantage as they can be transplanted to any database, but the moment nativeQuery is included, flexibility decreases.
+Let's think of other methods that don't use Native Query.

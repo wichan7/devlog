@@ -22,9 +22,10 @@ export default function Home({ params }: HomeProps) {
   const { locale } = params
 
   return (
-    <div className="prose dark:prose-invert">
+    <div className="prose max-w-none dark:prose-invert">
       {allPosts
         .filter((post) => post.locale === locale)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .map((post) => (
           <article key={post._id}>
             <Link href={post.slug}>
