@@ -24,7 +24,7 @@ Next.js 13의 App Router와 Contentlayer를 기반으로, Tailwind CSS와 다크
 
 ## 🖥 Demo
 
-👉 **Live Site**: [next-contentlayer.vercel.app](https://next-contentlayer.vercel.app)
+👉 **Live Site**: [https://blog.wichan.dev](https://blog.wichan.dev)
 
 ## 🛠 Getting Started
 
