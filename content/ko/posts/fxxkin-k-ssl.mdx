@@ -1,0 +1,62 @@
+---
+title: API 서버에 한국 SSL 인증서를 사용하지 마시오
+description: 애플 웹훅 설정 중 발생한 이슈와 인사이트
+date: 2025-10-07
+tags:
+  - Infra
+  - SSL
+---
+
+애플 ID 회원탈퇴 등의 이벤트가 발생하면, 우리 서비스로 http 요청을 쏘는 기능을 제공한다 (웹훅)  
+![apple2ourserver](/images/ssl/apple2ourserver.png)  
+
+이를 활용해 애플 ID 계정을 탈퇴할 때 우리 서비스 계정도 휴면 처리하는 등 기능을 구현할 수 있다.  
+
+## 문제 상황
+
+애플 대시보드에서 웹훅 엔드포인트만 설정하면 간단하게 끝날 줄 알았다.  
+웬걸.. **웹훅 요청이 수신되지 않는다.**  
+특이한 점은 ngrok이나 웹훅 테스트 사이트에는 정상적으로 요청이 수신된다.  
+![apple2otherserver](/images/ssl/apple2otherserver.png)  
+
+당연히 WAF, Whitelist는 정상 설정되었음을 확인했다. `(17.0.0.0/8)`
+
+## 무슨 차이가 있는가?
+
+우리 API 서버와 웹훅 테스트 서비스는 어떤 차이가 있기에 통신이 되지 않을까?  
+막연히 SSL 문제일 것이라는 감이 와서 [SSL 체크 사이트](https://www.ssllabs.com/)에서 어떤 차이가 있는지 살펴보았다.  
+
+가장 눈에 띄었던 것은 `Trusted`에 Java가 빨간색으로 포시되었다는 점이다.  
+![sslchecker_trusted](/images/ssl/sslchecker_trusted.png)  
+
+그리고 문제는 이 때문이 맞았다.
+
+## SSL 통신 과정에 대한 이해
+SSL 통신에 대한 이해가 부족해 `Trusted`가 무엇을 의미하는지 몰라 SSL 통신에 대해 공부해보았다.  
+
+### 1. 준비 단계
+![ssl_step1](/images/ssl/ssl_step1.png)  
+
+SSL 통신 과정에서 Client는 CA 공개 키 목록을 가지고 있어야 한다.  
+공개 키 목록을 관리하는 주체는 OS, Mozilla, Java 등이 있다.  
+※ 일반적으로는 OS의 Trust Store에 저장된 공개키로 검증하나, Mozila Java는 예외이다.
+
+
+### 2. SSL 인증서 발급 단계
+![ssl_step2](/images/ssl/ssl_step2.png)  
+
+ㅇㅇㅇㅇ
+ㅇㅇㅇㅇ
+ㅇㅇㅇ
+
+
+### 3. 클라이언트 - 서버 통신 단계
+
+ 
+
+## 상황 요약
+
+
+
+## 결론
+
