@@ -1,0 +1,80 @@
+---
+title: Why Choosing the Right SSL Certificate CA Matters
+description: A case study of an issue encountered during Apple Webhook setup and its root cause
+date: 2025-10-07
+tags:
+  - Infra
+  - SSL
+---
+
+When an event such as **Apple ID account deletion** occurs, Apple provides a webhook feature that sends an HTTP request to our service.  
+![apple2ourserver](/images/ssl/apple2ourserver.png)  
+
+Using this, we can automatically deactivate a user’s account in our service when their Apple ID is deleted.  
+
+## Problem
+
+I expected the setup to be simple—just register our webhook endpoint in Apple’s dashboard and done.  
+However, no webhook requests were being received at all.  
+
+Interestingly, when using **ngrok** or a **webhook testing site**, the requests were delivered successfully.  
+![apple2otherserver](/images/ssl/apple2otherserver.png)  
+
+We confirmed that WAF and whitelist settings (`17.0.0.0/8`) were properly configured.
+
+## What’s the Difference?
+
+So, what was different between our API server and those webhook test services?  
+Suspecting an SSL issue, I checked our domain with an [SSL testing site](https://www.ssllabs.com/).  
+
+One thing stood out — the **“Trusted”** section showed a red mark for **Java**.  
+![sslchecker_trusted](/images/ssl/sslchecker_trusted.png)  
+
+That’s where the real problem originated.
+
+## Understanding SSL Communication
+
+The term **“Trusted”** means whether a client recognizes the server’s certificate as trustworthy.  
+To understand this better, let’s go through the SSL communication process step by step.
+
+### 1. Preparation Phase
+![ssl_step1](/images/ssl/ssl_step1.png)  
+
+1. The CA generates an asymmetric key pair (public/private).  
+2. The client maintains a list of trusted CAs.  
+   - Each environment (OS, Mozilla, Java, etc.) has its own trust store.
+
+### 2. Certificate Issuance and Configuration
+![ssl_step2](/images/ssl/ssl_step2.png)  
+
+3. The server generates its own key pair and sends the public key to the CA.  
+4. The CA hashes the server’s public key and signs it with its private key to issue a certificate.  
+5. The server installs the issued certificate.  
+
+> The **CA signature** is essentially “the CA’s verification and signing of the server’s public key.”
+
+### 3. Client–Server Communication
+![ssl_step3](/images/ssl/ssl_step3.png)  
+
+6. The client requests an SSL connection to the server.  
+7. The server sends its certificate to the client.  
+8. The client verifies the CA’s signature on the certificate.  
+   - The client uses the CA’s public key stored in its trust store.  
+9. Once verified, both sides exchange a symmetric key for communication.  
+10. They then use that symmetric key to encrypt and decrypt data for secure communication.  
+
+> In asymmetric cryptography, data encrypted with the public key can be decrypted with the private key, and vice versa.
+
+## Root Cause
+
+The CA used for our certificate was **not included in Java’s Trust Store**.  
+Since Apple’s webhook client is written in Java, the SSL handshake failed due to the untrusted CA.  
+
+In other words, from the Java client’s perspective, our server’s certificate was **not trusted**.
+
+## Summary
+
+1. Depending on the CA, some clients may not recognize your SSL certificate as valid.  
+2. In this case, the `TuringSign` certificate from `Korea Electronic Certification Authority` was not included in Java’s Trust Store, causing the connection failure.  
+3. If your service needs to communicate with global clients or Java-based systems, choose a widely recognized CA such as **DigiCert** or **Let’s Encrypt**.  
+   - Note that Let’s Encrypt is free to use.
