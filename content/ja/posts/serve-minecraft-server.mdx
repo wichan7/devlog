@@ -1,0 +1,164 @@
+---
+title: マインクラフトサーバーをクラウドでホスティングする
+description: 小学生じゃないです
+date: 2024-07-21
+tags:
+  - Cloud
+  - Minecraft
+---
+
+## 概要
+
+私たちは99年生まれで26歳だが、精神的年齢はまだ高校生の頃のままだ。  
+私たちはマインクラフトを一緒にプレイすることにしたが、高校生の頃とは違い、それぞれのスケジュールができてしまった私たちは常に一緒にいられる時間が合わず、いつでも接続できるマインクラフトサーバーが必要だった。
+
+今日はクラウドでマインクラフトサーバーをホスティングすることについての話である。
+
+## 1次試行
+
+### amazon ec2のfree-tier制限で可能か？
+
+マインクラフトサーバーを24時間提供したくて、よく使っているAWSに載せようとし、お金をかけたくはなかったのでfree-tierの制限内で終わらせたかった。
+
+マインクラフトJava版のサーバーは最低最低最低でも1GB以上の利用可能なRAMを必要とする。  
+aws ec2ではt2.microコンピューティングを無料で使用できるが、t2 microはRAMを1GBしか提供しないため、OSを動かした後は利用可能なRAMがほとんど残らない。([https://aws.amazon.com/ko/ec2/instance-types/t2/](https://aws.amazon.com/ko/ec2/instance-types/t2/))
+
+### そこで...
+
+私にはより良いスペックが必要で、amazon lightsailがこれを解決してくれそうだった。  
+lightsailはec2よりも使いやすいインターフェースを提供するコンピューティングサービスと言えるが、アマゾンが推したいサービスなのか、無料でかなり良い性能のコンピューティングを提供している。
+
+| cpu     | memory      | storage           | transfer      |
+| ------- | ----------- | ----------------- | ------------- |
+| 2 vCPUs | 2 GB Memory | 60 GB SSD Storage | 3 TB Transfer |
+
+lightsailで動かしてみよう。
+
+### lightsail設定
+
+友人向けのサービスとはいえ、快適にはサービスしたい。  
+そこで過去に試したことがないLinux環境で動かそうとし、ubuntu OSを採用した。
+
+マインクラフトはデフォルトで25565ポートなので、25565 inboundをallowする。
+
+### ubuntu設定
+
+最近Dockerに慣れてきたので、まずDockerをインストールした。
+
+```sh showLineNumbers
+sudo apt-get update
+
+sudo apt-get install apt-transport-https ca-certificates curl gnupg-agent software-properties-common
+
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+
+sudo apt-get update
+
+sudo apt-get install docker-ce docker-ce-cli containerd.io
+
+sudo systemctl status docker
+```
+
+### マインクラフトサーバーイメージのプル
+
+誰かがよく作ってくれたマインクラフトサーバーイメージがあった。安定版で受け取った。
+
+```sh showLineNumbers
+docker pull itzg/minecraft-server:stable
+```
+
+### docker-compose作成
+
+latestやstableバージョンで動かすと、新しいサーバーバージョンが出た時に自動的にアップグレードしてくれる。
+
+```yaml showLineNumbers
+services:
+  mc:
+    image: itzg/minecraft-server:stable
+    tty: true
+    stdin_open: true
+    ports:
+      - "25565:25565"
+    environment:
+      EULA: "TRUE"
+    volumes:
+      # attach the relative directory 'data' to the container's /data path
+      - ./data:/data
+```
+
+### 確認
+
+```sh showLineNumbers
+docker-compose up -d
+docker-compose ps
+docker ps
+```
+
+マウントされた./data/logsに入って、java -Xms1G -Xmx1G で1GB RAMを使用したサーバーが正常に動作していることを確認した。
+
+### それでうまくいったか？
+
+二人で接続してテストしたところ、最初は快適にうまく動いたが、エリトラアイテムを使った時に問題が発生した。  
+移動速度が速いエリトラを使うと、チャンクローディングが瞬時に多くリクエストされてRAMが不足してしまった。
+
+より良い方法を考えてみよう。
+
+## 2次試行
+
+RAMが不足しているので、Dockerを使うことで発生するoverheadを減らし、Linux swap memoryを活用して不足しているRAMを補おうとした。
+
+### openjdkインストール
+
+```sh showLineNumbers
+apt install openjdk-22-jre-headless
+java --version
+```
+
+### minecraft-paperダウンロード
+
+[https://papermc.io/downloads](https://papermc.io/downloads)
+
+10年前に使っていたminecraft-bukkitはサポートが終了したらしい。  
+性能も新しく出たpaperが良いと言われているので、paperサーバー起動機をダウンロードした。
+
+### スワップメモリ設定
+
+ストレージは余裕があるので20GB flexをしてみよう。
+
+```sh showLineNumbers
+sudo fallocate -l 20G /mnt/swapfile
+
+sudo chmod 600 /mnt/swapfile
+
+sudo mkswap /mnt/swapfile
+
+sudo swapon /mnt/swapfile
+
+sudo swapon --show
+```
+
+### メモリフレックス
+
+```sh showLineNumbers
+java -Xms4G -Xmx16G -jar paper-1.21-106.jar
+```
+
+### それでうまくいったか？
+
+まず1次試行よりも体感性能が悪くなったが、理由はswap-memory使用によるオーバーヘッドだと考えている。
+
+SSDが速いとはいえ、メモリと補助記憶装置間のアクセスタイムの差は明らかで、スワップメモリスイッチング作業のためのCPU作業が発生せざるを得ず、これに従って1次試行時よりも多くのCPUを使用していることが見られた。
+
+![cpu-usage-statistics](/images/cloud/minecraft/cpu-usage.png)
+
+プレイヤーが接続していなかった時、cpu-usageは12%程度にとどまり、一人のプレイヤーが接続して活動する時、cpu usageが50%程度まで跳ね上がった。もちろん複数人の接続をテストしてみたわけではないが、一日に一人以上のプレイヤーが6時間以上プレイすると仮定すると、cpu-burst credit使用率が全く持続可能ではなかった。
+
+性能もより低く、持続可能ではない方法なので、2次試行も失敗に終わった。
+
+## 3次試行
+
+azureでは一ヶ月間$200のcreditを提供しているという。  
+よかった。お金が最高だ。
+
