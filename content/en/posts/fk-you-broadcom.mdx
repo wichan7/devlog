@@ -1,0 +1,47 @@
+---
+title: Redis Incident and Broadcom's Crazy Behavior
+description: Someone please stop crazy Broadcom
+date: 2025-11-02
+tags:
+  - Infra
+  - News
+---
+
+Our service is heavily dependent on Redis, making it a single point of failure. So we've set up high availability and are diligently monitoring it.  
+While monitoring the cluster while drinking an iced americano as usual... I saw that two Redis nodes had died. Did Docker Hub die again? Can't it find DNS? I began the frantic hunt to find the cause.
+
+## The Cause Found
+
+Wait, `bitnami/redis:debian-*` can't even be pulled locally?!? I immediately went to the [Docker Hub repository](https://hub.docker.com/r/bitnami/redis) and saw...
+
+> Starting August 28th, over two weeks, all existing container images, including older or versioned tags (e.g., 2.50.0, 10.6), will be migrated from the public catalog (docker.io/bitnami) to the "Bitnami Legacy" repository (docker.io/bitnamilegacy), where they will no longer receive updates.
+
+Starting August 29, 2025, images previously provided from the `/bitnami` repository have been migrated to `/bitnamilegacy`.  
+Of course, if you delete the `/bitnami/redis:*` tag, it can't be pulled.
+
+## Bitnami's Explanation
+
+> Beginning August 28th, 2025, Bitnami will evolve its public catalog to offer a curated set of hardened, security-focused images under the new Bitnami Secure Images initiative⁠. As part of this transition:
+
+They're saying they're launching security images and discontinuing support for existing images to push this as the main offering.
+
+Security images are provided for free. However, only the latest tag is available, so it can't be used in production.  
+Security images with version tags are paid! How much? **$62,000 per year**! That's **88.6 million KRW** lol
+
+## Why Are They Doing This?
+
+Bitnami is a repository with such a long history that it's called a pioneer, managing famous charts like mongo, redis, postgres..., all of which are targets for monetization.  
+And the reason is entirely due to Broadcom.
+
+Broadcom is fundamentally a semiconductor company, but recently it's been showing the behavior of a Vulture Capital that acquires companies and fleeces them before leaving.  
+In 2018, it acquired CA Technologies, in 2019 it acquired Symantec, and in 2023 it acquired VMWare.  
+After acquisition, they've terminated permanent licenses of existing services and converted them to subscriptions, monetizing the bitnami/* open repository, showing a focus on profit generation.
+
+Actually, since profit generation is the primary goal of corporations, Broadcom's behavior isn't completely incomprehensible.  
+However, when it comes to bitnami/*, $62,000 per year isn't pocket change, and it only appears to be a sleazy attempt to extract $62,000 from companies that need quick responses, forcing them to swallow bitter medicine.
+
+## Solution
+
+As a quick fix, I deployed using the `/bitnamilegacy/redis:debian-*` image.  
+I plan to carefully examine other charts that provide sentinel configuration.
+
