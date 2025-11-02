@@ -1,0 +1,42 @@
+---
+title: Redis 장애 발생(할 뻔)과 브로드컴의 미친 행보
+description: 미친 브로드컴 좀 누가 말려줘요
+date: 2025-11-02
+tags:
+  - Infra
+  - News
+---
+
+우리의 서비스는 Redis에 굉장히 의존해 단일 장애 지점이다. 그래서 고가용 구성도 하고 열심히 모니터링도 한다.  
+여느 날처럼 아이스 아메를 마시며 클러스터를 모니터링 하던 중.. Redis 노드 2개가 죽은 것을 보았다. 미친 도커 허브가 또 죽었나? DNS를 못찾나? 진땀의 원인 찾기 똥꼬쇼를 펼쳤다.  
+
+## 발견한 원인
+오잉 `bitnami/redis:debian-*`가 로컬에서도 풀이 안된다?!? 바로 [도커허브 레포](https://hub.docker.com/r/bitnami/redis)로 접속해보았더니..
+
+> Starting August 28th, over two weeks, all existing container images, including older or versioned tags (e.g., 2.50.0, 10.6), will be migrated from the public catalog (docker.io/bitnami) to the “Bitnami Legacy” repository (docker.io/bitnamilegacy), where they will no longer receive updates.
+
+25년 8월 29일부터 `/bitnami` 레포에서 제공하던 이미지들을 `/bitnamilegacy` 로 이전 했단다.  
+당연하게도 /bitnami/redis:* 태그를 삭제하면 풀이 안된다.  
+
+## bitnami의 설명
+> Beginning August 28th, 2025, Bitnami will evolve its public catalog to offer a curated set of hardened, security-focused images under the new Bitnami Secure Images initiative⁠. As part of this transition:
+
+보안 이미지를 출시할건데 이걸 메인으로 밀기 위해, 기존 이미지들은 지원을 중단한다는 소리다.  
+
+보안 이미지를 무료로 제공은 한다. 다만 latest 태그만 사용 가능해서 프로덕션으로는 못쓴다.  
+버전을 지정한 보안 이미지는 유료다! 얼마냐? 연간 **$62,000**! 한화로는 **8,860만원**이다ㅋㅋ
+
+## 왜 이런 행보를 보이는가?
+bitnami는 개척자라 불릴 정도의 유구한 역사를 가진 레포인데, mongo, redis, postgres.. 등 유명한 차트들을 관리하고, 모두 유료화의 대상이다.  
+그리고 그 이유는 전부 Broadcom에 있다.  
+
+Broadcom은 근본적으로 반도체 회사인데, 최근 들어 기업을 인수해 털어먹고 나오는 Vulture Capital의 행보를 보이고 있다.  
+2018년 CA Technologies 인수, 2019년 symantec 인수, 2023년 VMWare를 인수했다.  
+인수 후에는 기존 서비스의 영구 라이센스들을 종료시키고 구독형으로 전환, bitnami/* 오픈 레포의 유료화 등 이윤 창출에 주안한 모습을 보인다.  
+
+사실 기업이라는게 이윤 창출이 제 1목표이니, 브로드컴의 행보가 아주 이해가지 않는 것은 아니다.  
+다만 bitnami/* 에 있어서는 연간 $62,000 이라는게 껌 값도 아니고, 빠른 대응이 필요한 기업들에게서 울며 겨자 먹기 식으로 62,000불을 뜯어먹겠다는 추잡한 의도로 밖에 보이지 않는다.  
+
+## 해결 방안
+급한 대로 `/bitnamilegacy/redis:debian-*` 이미지를 사용해 배포했다.  
+sentinel 구성을 제공하는 다른 차트를 찬찬히 살펴 볼 예정이다.  

@@ -1,0 +1,47 @@
+---
+title: Redis障害発生(しそうになった)とBroadcomの狂った行い
+description: 狂ったBroadcomを誰か止めてください
+date: 2025-11-02
+tags:
+  - Infra
+  - News
+---
+
+私たちのサービスはRedisに非常に依存しており、単一障害点である。だから高可用構成もして熱心に監視もしている。  
+いつものようにアイスアメリカーノを飲みながらクラスターを監視していたところ... Redisノード2つが死んでいるのを見た。またDocker Hubが死んだのか？DNSを見つけられないのか？冷や汗をかきながら原因を探すドタバタ劇を繰り広げた。
+
+## 発見した原因
+
+あれ？`bitnami/redis:debian-*`がローカルでもプルできない？！？すぐに[Docker Hubレポ](https://hub.docker.com/r/bitnami/redis)にアクセスしてみたら...
+
+> Starting August 28th, over two weeks, all existing container images, including older or versioned tags (e.g., 2.50.0, 10.6), will be migrated from the public catalog (docker.io/bitnami) to the "Bitnami Legacy" repository (docker.io/bitnamilegacy), where they will no longer receive updates.
+
+25年8月29日から`/bitnami`レポで提供していたイメージを`/bitnamilegacy`に移行したという。  
+当然ながら/bitnami/redis:*タグを削除するとプルできない。
+
+## bitnamiの説明
+
+> Beginning August 28th, 2025, Bitnami will evolve its public catalog to offer a curated set of hardened, security-focused images under the new Bitnami Secure Images initiative⁠. As part of this transition:
+
+セキュリティイメージをリリースするが、これをメインに押し出すために、既存のイメージのサポートを中止するという話だ。
+
+セキュリティイメージは無料で提供される。ただしlatestタグのみ使用可能で、プロダクションでは使えない。  
+バージョンを指定したセキュリティイメージは有料だ！いくらか？年間**$62,000**！日本円では約**9,000万円**だwww
+
+## なぜこんな行いをするのか？
+
+bitnamiは開拓者と呼ばれるほど長い歴史を持つレポだが、mongo、redis、postgres...など有名なチャートを管理しており、全てが有料化の対象である。  
+そしてその理由は全てBroadcomにある。
+
+Broadcomは根本的に半導体会社だが、最近になって企業を買収して食い物にして出て行くVulture Capitalの行いを見せている。  
+2018年にCA Technologies買収、2019年にsymantec買収、2023年にVMWareを買収した。  
+買収後は既存サービスの永続ライセンスを終了させてサブスクリプション型に転換、bitnami/*オープンレポの有料化など、利益創出に重点を置いた姿を見せている。
+
+実際、企業というものは利益創出が第一目標なので、Broadcomの行いが全く理解できないわけではない。  
+ただしbitnami/*に関しては年間$62,000というのはガム代でもなく、迅速な対応が必要な企業から泣きながらワサビを食べるように$62,000を搾り取ろうとする卑劣な意図にしか見えない。
+
+## 解決策
+
+急いで`/bitnamilegacy/redis:debian-*`イメージを使ってデプロイした。  
+sentinel構成を提供する他のチャートをじっくりと見ていく予定である。
+
