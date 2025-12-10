@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  /* 브라우저 기본 포커스 링 제거 */
+  * {
+    @apply outline-none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
 @layer utilities {
   .animation-delay-2000 {
     animation-delay: 2s;
