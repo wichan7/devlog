@@ -1,5 +1,6 @@
 const { withContentlayer } = require("next-contentlayer")
 const createNextIntlPlugin = require('next-intl/plugin')
+const i18nConfig = require("./src/i18n/constant.json")
 
 const withNextIntl = createNextIntlPlugin();
 
@@ -7,6 +8,16 @@ const withNextIntl = createNextIntlPlugin();
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: `/${i18nConfig.defaultLocale}`,
+        permanent: true
+      },
+    ];
+  },
 
   webpack(config) {
     config.module.rules.push({
