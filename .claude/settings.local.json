@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -h \"^tags:\" D:\\\\workspace\\\\devlog\\\\content\\\\ko\\\\posts\\\\*.mdx | sort | uniq -c | sort -rn | head -30)",
+      "Bash(grep -h \"^title:\" D:\\\\workspace\\\\devlog\\\\content\\\\ko\\\\posts\\\\*.mdx)",
+      "Bash(for f:*)"
+    ]
+  }
+}
