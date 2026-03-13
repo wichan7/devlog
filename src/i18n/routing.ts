@@ -5,4 +5,5 @@ export const routing = defineRouting({
   locales: i18nConfig.locales,
   defaultLocale: i18nConfig.defaultLocale,
   localeDetection: false,
+  localePrefix: 'as-needed',
 })
