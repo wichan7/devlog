@@ -1,0 +1,89 @@
+---
+title: A Developer's Take on a Hacking (RedTeam) Competition
+description: ENKI RedTeam CTF
+date: 2026-03-21
+tags:
+  - Competition
+  - Security
+---
+
+I participated in a hacking competition. A friend who studies security was entering, and I thought — why not give it a shot? With five years of development experience under my belt, I figured I'd dip my toes in.
+
+## Before We Begin
+
+The competition I entered was the `ENKI RedTeam CTF`.
+Before diving into the review, let me briefly cover some security terms for those unfamiliar — I didn't know them myself when I signed up.
+
+**RedTeam**: A team that executes infiltration scenarios from an "attacker's" perspective to identify security vulnerabilities. The defensive side is called the "BlueTeam."
+**CTF (Capture The Flag)**: Literally "capture the flag." It's a hacking competition where you exploit system weaknesses to find hidden strings (Flags) and earn points.
+**ENKI**: A fairly large domestic cybersecurity company. Apparently they held this competition to recruit white-hat hackers — offering job opportunities to roughly the top 30 finishers.
+
+So in short: it's a penetration (hacking) contest hosted by ENKI, ranked by who can best find FLAGS (strings).
+
+## Competition Start
+
+Honestly, I hadn't had much exposure to the security field. I dropped my information security course in school, and for the security certification exam, I barely scraped through the written portion before dropping the practical as well.
+Security requires an unusually deep breadth of knowledge — and I thought, what's the point of cramming the day before? So I just went to bed early and decided to throw myself at it with a fresh head.
+
+The competition ran online from 11 AM Saturday to 11 AM Sunday — 24 hours total.
+I jumped in right at 11 and started by surveying the problem types.
+
+The first type provided client/server source code along with the target website URL.
+The second type gave only a website URL with no additional information. (For this type, you had to gain root access to the target server through the website and retrieve the flag.)
+
+After sizing up the problem types, I fired up multiple Claude Code instances across several terminals.
+In a somewhat strategic move, I also found and applied a `senior-security-engineer` skill I found online.
+With my quick fingers and Claude's sharp mind, nothing felt impossible.
+
+I loaded four problems across four terminals, delegated the brainwork to Claude, and grabbed a coffee with the casual confidence of "what if I solve these too fast?"
+
+## Disappointed in Claude
+
+My role was reduced to pressing Y across four terminals. After about an hour of Y-clicking labor, something felt off.
+Claude was trying various approaches, but it couldn't find any exploitable vulnerabilities — it kept getting stuck on specific cases and spinning its wheels with meaningless attempts.
+
+To make things worse, I hit Claude Code's daily limit. All I had left was Gemini's free plan and my own brain.
+
+## Solving It Myself
+
+*Note: Due to copyright on the problems, I haven't included detailed solution steps.*
+
+I picked one problem in a domain I knew at least something about and dug in deep.
+It was a simple infrastructure built with Next, Flask, and Redis (+Lua), and the location of the FLAG was clear.
+
+I had completed most of the source code analysis. The conclusion: I needed to get Next to send an internal request to a specific Python endpoint.
+But how exactly? The source code had carefully written defensive code that seemed airtight.
+
+I got stuck there. Six hours passed. It was 5 PM.
+
+## Claude Is a God
+
+Once the daily Claude limit reset, I shared what I'd figured out and we brainstormed together on how to crack it.
+
+During that conversation, a promising idea came up.
+The suggestion was to abuse a specific feature provided by Next — and that turned out to be the key.
+
+Since this was the core vulnerability of the problem, I can't go into detail, but by combining a framework-specific feature exploit with network communication abuse, I finally got the FLAG.
+It was 7 PM — eight hours after I had started on the problem.
+
+Getting that FLAG gave me a rush of dopamine I hadn't felt in a long time. When was the last time I spent eight straight hours grinding on a single problem?
+Claude's contribution was huge, but I can't deny that my own foundational knowledge played a major role in co-working with Claude effectively.
+
+## Results
+
+I solved exactly one problem through sheer persistence.
+(The scoreboard shows 2 — one problem was counted as solved just for joining the Discord server.)
+
+![scoreboard](/images/enki_redteam_ctf/scoreboard.png)
+
+## Takeaways
+
+I tried another problem after that, but one missing link kept blocking progress.
+
+The takeaway: even having a passing familiarity with the domain makes it hard to solve even a single problem.
+
+Still, I feel a genuine sense of accomplishment for having solved at least one.
+
+### Disclaimer
+
+> This writeup was written to respect the copyright of the competition problems and does not include specific vulnerability details, payloads, source code, or the core solution process. It focuses on personal learning experiences and insights. If there are any legal concerns with this article, please contact `wichan.dev@gmail.com`.
