@@ -1,6 +1,6 @@
 import { allPosts } from "contentlayer/generated"
 import type { Metadata } from "next"
-import Link from "next/link"
+import { Link } from "@/i18n/navigation"
 
 interface PageProps {
   params: {
@@ -31,7 +31,7 @@ export default async function PagePage({ params }: PageProps) {
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .map((post) => (
           <article key={post._id}>
-            <Link href={post.slug}>
+            <Link href={`/${post.slugAsParams}`}>
               <h2>{post.title}</h2>
             </Link>
             {post.description && <p>{post.description}</p>}
