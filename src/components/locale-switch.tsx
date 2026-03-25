@@ -1,8 +1,8 @@
 "use client"
 
-import { usePathname, useRouter } from "next/navigation"
 import EarthIcon from "@/assets/svg/earth.svg"
 import i18nConfig from "@/i18n/constant.json"
+import { usePathname, useRouter } from "@/i18n/navigation"
 
 interface LocaleSwitchProps {
   currentLocale: string
@@ -13,9 +13,7 @@ export function LocaleSwitch({ currentLocale }: LocaleSwitchProps) {
   const pathname = usePathname()
 
   const changeLocale = (newLocale: string) => {
-    const segments = pathname.split("/")
-    segments[1] = newLocale
-    router.push(segments.join("/"))
+    router.push(pathname, { locale: newLocale })
   }
 
   const handleClick = () => {
