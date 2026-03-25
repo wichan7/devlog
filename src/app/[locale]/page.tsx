@@ -9,12 +9,23 @@ interface HomeProps {
   }
 }
 
-export async function generateMetadata(): Promise<Metadata> {
+const SITE_URL = process.env.SITE_URL || "https://blog.wichan.dev"
+
+export async function generateMetadata({ params }: HomeProps): Promise<Metadata> {
+  const { locale } = params
   const t = await getTranslations()
 
   return {
     title: t("metadata.title"),
     description: t("metadata.description"),
+    alternates: {
+      canonical: `${SITE_URL}${locale === "ko" ? "" : `/${locale}`}`,
+      languages: {
+        ko: SITE_URL,
+        en: `${SITE_URL}/en`,
+        ja: `${SITE_URL}/ja`,
+      },
+    },
   }
 }
 

@@ -22,6 +22,8 @@ async function getPostFromParams(params: PostProps["params"]) {
   return post ?? null
 }
 
+const SITE_URL = process.env.SITE_URL || "https://blog.wichan.dev"
+
 export async function generateMetadata({
   params,
 }: PostProps): Promise<Metadata> {
@@ -31,9 +33,19 @@ export async function generateMetadata({
     return {}
   }
 
+  const slug = params.slug.join("/")
+
   return {
     title: post.title,
     description: post.description,
+    alternates: {
+      canonical: `${SITE_URL}${params.locale === "ko" ? "" : `/${params.locale}`}/posts/${slug}`,
+      languages: {
+        ko: `${SITE_URL}/posts/${slug}`,
+        en: `${SITE_URL}/en/posts/${slug}`,
+        ja: `${SITE_URL}/ja/posts/${slug}`,
+      },
+    },
   }
 }
 
