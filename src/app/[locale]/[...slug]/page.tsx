@@ -22,6 +22,8 @@ async function getPageFromParams(params: PageProps["params"]) {
   return page ?? null
 }
 
+const SITE_URL = process.env.SITE_URL || "https://blog.wichan.dev"
+
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
@@ -31,9 +33,19 @@ export async function generateMetadata({
     return {}
   }
 
+  const slug = params.slug.join("/")
+
   return {
     title: page.title,
     description: page.description,
+    alternates: {
+      canonical: `${SITE_URL}${params.locale === "ko" ? "" : `/${params.locale}`}/${slug}`,
+      languages: {
+        ko: `${SITE_URL}/${slug}`,
+        en: `${SITE_URL}/en/${slug}`,
+        ja: `${SITE_URL}/ja/${slug}`,
+      },
+    },
   }
 }
 
