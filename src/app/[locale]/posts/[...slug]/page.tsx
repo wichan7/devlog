@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import Giscus from "@/components/giscus"
 import { Mdx } from "@/components/mdx-components"
+import { Link } from "@/i18n/navigation"
 
 interface PostProps {
   params: {
@@ -73,6 +74,17 @@ export default async function PostPage({ params }: PostProps) {
       )}
       <hr className="my-4" />
       <Mdx code={post.body.code} />
+      <div className="not-prose flex flex-wrap gap-2 mt-8">
+        {post.tags.map((tag) => (
+          <Link
+            key={tag}
+            href={`/tags/${tag}`}
+            className="px-3 py-1 text-sm rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          >
+            {tag}
+          </Link>
+        ))}
+      </div>
       <Giscus currentLocale={params.locale} />
     </article>
   )
