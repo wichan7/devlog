@@ -1,7 +1,7 @@
 import { allPosts } from "contentlayer/generated"
-import Link from "next/link"
 import type { Metadata } from "next/types"
 import { getTranslations } from "next-intl/server"
+import { Link } from "@/i18n/navigation"
 
 interface HomeProps {
   params: {
@@ -11,7 +11,9 @@ interface HomeProps {
 
 const SITE_URL = process.env.SITE_URL || "https://blog.wichan.dev"
 
-export async function generateMetadata({ params }: HomeProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: HomeProps): Promise<Metadata> {
   const { locale } = params
   const t = await getTranslations()
 
@@ -39,7 +41,7 @@ export default function Home({ params }: HomeProps) {
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .map((post) => (
           <article key={post._id}>
-            <Link href={post.slug}>
+            <Link href={`/${post.slugAsParams}`}>
               <h2>{post.title}</h2>
             </Link>
             {post.description && <p>{post.description}</p>}
