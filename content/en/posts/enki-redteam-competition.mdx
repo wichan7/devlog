@@ -11,7 +11,7 @@ I participated in a hacking competition. A friend who studies security was enter
 
 ## Before We Begin
 
-The competition I entered was the `ENKI RedTeam CTF`.
+The competition I entered was the `ENKI RedTeam CTF`. [(link)](https://ctf.enki.co.kr/)
 Before diving into the review, let me briefly cover some security terms for those unfamiliar — I didn't know them myself when I signed up.
 
 **RedTeam**: A team that executes infiltration scenarios from an "attacker's" perspective to identify security vulnerabilities. The defensive side is called the "BlueTeam."
@@ -46,13 +46,11 @@ To make things worse, I hit Claude Code's session limit. All I had left was Gemi
 
 ## Solving It Myself
 
-*Note: Due to copyright on the problems, I haven't included detailed solution steps.*
-
 I picked one problem in a domain I knew at least something about and dug in deep.
-It was a simple infrastructure built with Next, Flask, and Redis (+Lua), and the location of the FLAG was clear.
 
-I had completed most of the source code analysis. The conclusion: I needed to get Next to send an internal request to a specific Python endpoint.
-But how exactly? The source code had carefully written defensive code that seemed airtight.
+The service was structured with a Next frontend serving the web interface and a Flask + Redis backend that wasn't exposed externally.
+I had completed most of the source code analysis. The conclusion: I needed to get Next to send an internal request to a specific Flask endpoint.
+But how exactly? Every path in the source code that made internal calls seemed off-limits.
 
 I got stuck there. Six hours passed. It was 5 PM.
 
@@ -61,13 +59,35 @@ I got stuck there. Six hours passed. It was 5 PM.
 Once the Claude session limit reset, I shared what I'd figured out and we brainstormed together on how to crack it.
 
 During that conversation, a promising idea came up.
-The suggestion was to abuse a specific feature provided by Next — and that turned out to be the key.
+The suggestion was to abuse Next's `next-image` feature — and that turned out to be the key.
 
-Since this was the core vulnerability of the problem, I can't go into detail, but by combining a framework-specific feature exploit with network communication abuse, I finally got the FLAG.
-It was 7 PM — eight hours after I had started on the problem.
+Next fetches images from the internal filesystem or specific external endpoints to optimize and resize them.
+This can be triggered with a URL like `https://nextservice.com/_next/image?url=https://img.com/cat.png`, and the idea was to pass an internal endpoint (`127.0.0.1:5000/get-image`) in the `?url=` query parameter.
+
+The moment I saw the idea I thought, this is it. But when I actually tried calling `?url=http://127.0.0.1/get-image`, it was blocked by Next's own policy.
+Turns out Next blocks internal calls to `127.0.0.1` and `localhost` by default.
+
+I complained to Claudemon that it wasn't working, and it introduced me to a technique called **DNS Rebinding**.
+The idea is to return different DNS responses at the time of the URL check versus the time of the actual data fetch, bypassing IP-based validation.
+
+```typescript
+function fetchImage(url) {
+  const host = url.getHost();
+  if (host === '127.0.0.1') { // at this point: a legitimate public IP
+    return null;
+  }
+
+  const image = fetch(url); // at this point: resolves to 127.0.0.1
+  return optimize(image);
+}
+```
+
+Since Next blocks calls in a form like the above, the trick is to pass the IP check with a legitimate public IP, then have the DNS resolve to `127.0.0.1` by the time `fetch()` is called.
+
+Using this method, I finally obtained the FLAG. It was 7 PM — eight hours after I had started on the problem.
 
 Getting that FLAG gave me a rush of dopamine I hadn't felt in a long time. When was the last time I spent eight straight hours grinding on a single problem?
-Claude's contribution was huge, but I can't deny that my own foundational knowledge played a major role in co-working with Claude effectively.
+Claude's contribution was huge, of course — but I'd like to think I deserve some credit too for understanding Claude's guidance and executing it correctly.
 
 ## Results
 
@@ -86,4 +106,6 @@ Still, I feel a genuine sense of accomplishment for having solved at least one.
 
 ### Disclaimer
 
-> This writeup was written to respect the copyright of the competition problems and does not include specific vulnerability details, payloads, source code, or the core solution process. It focuses on personal learning experiences and insights. If there are any legal concerns with this article, please contact `wichan.dev@gmail.com`.
+> ENKI's official writeups and solutions for other problems are available [at this link](https://www.enki.co.kr/media-center/blog/enki-redteam-ctf-jeopardy-writeup#catllery).
+
+> This post was written to document a personal learning experience. If there are any copyright or other concerns with this article, please contact `wichan.dev@gmail.com`.
