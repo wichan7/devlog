@@ -24,6 +24,26 @@
   }
 }
 
+/* Blockquote styling */
+.prose blockquote p::before,
+.prose blockquote p::after {
+  content: none;
+}
+
+.prose blockquote {
+  border-left-color: #818cf8;
+  background-color: #f1f5f9;
+  border-radius: 0 0.375rem 0.375rem 0;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1.25rem;
+}
+
+.dark .prose blockquote {
+  border-left-color: #a5b4fc;
+  background-color: #0f172a;
+}
+
 /* Inline code styling */
 .prose :not(pre) > code {
   background-color: #f1f5f9;
