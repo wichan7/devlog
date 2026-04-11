@@ -19,6 +19,26 @@
   }
 }
 
+/* Inline code styling */
+.prose :not(pre) > code {
+  background-color: #f1f5f9;
+  color: #e11d48;
+  padding: 0.15em 0.45em;
+  border-radius: 0.25rem;
+  font-weight: 500;
+  font-size: 0.875em;
+}
+
+.prose :not(pre) > code::before,
+.prose :not(pre) > code::after {
+  content: none;
+}
+
+.dark .prose :not(pre) > code {
+  background-color: #1e293b;
+  color: #fb7185;
+}
+
 code[data-line-numbers] {
   counter-reset: line;
 }
