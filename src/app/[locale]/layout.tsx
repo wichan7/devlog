@@ -1,5 +1,4 @@
 import { allPosts } from "contentlayer/generated"
-import { Inter } from "next/font/google"
 import { notFound } from "next/navigation"
 import { hasLocale, NextIntlClientProvider } from "next-intl"
 import { getTranslations, setRequestLocale } from "next-intl/server"
@@ -10,8 +9,6 @@ import { TagPopover } from "@/components/tag-popover"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Link } from "@/i18n/navigation"
 import { routing } from "@/i18n/routing"
-
-const inter = Inter({ subsets: ["latin"] })
 
 interface LocaleLayoutProps {
   children: React.ReactNode
@@ -46,7 +43,7 @@ export default async function LocaleLayout({
   return (
     <html lang={locale}>
       <body
-        className={`antialiased min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-50 tabular-nums ${inter.className}`}
+        className="antialiased min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-50 tabular-nums"
       >
         <NextIntlClientProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
@@ -89,8 +86,9 @@ export default async function LocaleLayout({
                     </div>
                   </div>
                 </header>
-
-                <main className="animate-fade-in">{children}</main>
+                <main className="animate-fade-in bg-white/80 dark:bg-slate-950/80 rounded-2xl px-12 py-4 backdrop-blur-sm border border-slate-200/60 dark:border-slate-700/60 shadow-xl shadow-slate-200/60 dark:shadow-slate-900/60">
+                  {children}
+                </main>
               </div>
             </div>
             <Analytics />
