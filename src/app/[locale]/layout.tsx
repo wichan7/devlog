@@ -86,7 +86,7 @@ export default async function LocaleLayout({
                     </div>
                   </div>
                 </header>
-                <main className="animate-fade-in bg-white/80 dark:bg-slate-950/80 rounded-2xl px-12 py-4 backdrop-blur-sm border border-slate-200/60 dark:border-slate-700/60 shadow-xl shadow-slate-200/60 dark:shadow-slate-900/60">
+                <main className="animate-fade-in bg-white/80 dark:bg-slate-800/60 rounded-2xl px-4 sm:px-12 py-4 backdrop-blur-sm border border-slate-200/60 dark:border-slate-700/60 shadow-xl shadow-slate-200/60 dark:shadow-slate-900/60">
                   {children}
                 </main>
               </div>
