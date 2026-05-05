@@ -25,6 +25,8 @@ while (true) {
 
 ## Javaの実際の実装（OSへの委譲）
 
+* Springはサーバー起動時に内部的に`selector.select()`を呼び出してイベントを待機する。
+
 [実際の実装](https://github.com/AdoptOpenJDK/openjdk-jdk11/blob/master/src/java.base/linux/classes/sun/nio/ch/EPollSelectorImpl.java)はこうなっている。（Java nioクラス、Springのログにあるあのnioスレッドで合っている）
 
 ```java
@@ -55,9 +57,12 @@ private int processEvents(int numEntries, Consumer<SelectionKey> action) {
 
 3. イベントが発生すると、カーネルがスレッドを起こし、イベントが発生したソケット（チャネル）の一覧を渡す。
 
-## ではhardware interruptを待つロジックはどう実装されているのか？
+## ではepoll_wait()の間、イベントをリスニングしながら待つロジックも結局while(true)ではないのか？
 
-結論から言うと、ハードウェア割り込みはイベントリスニングとは別の概念だ。  
+epoll_wait()を実装するために、結局while(true)のような待機が必要なのではないか？という考えが浮かんだ。
+
+この例では、NICからパケットが届いたときにepoll_wait()のブロックが解除される必要があり、そこでhardware interruptが使われる。
+
 コンピュータアーキテクチャの講義で確かに聞いた気がするが…聞いただけだったようだ。うろ覚えだ。
 
 ![structure](/images/cs/cpu-interrupt.png)
@@ -75,3 +80,8 @@ CPUは基本的に `while(true)` のように動作しているため、「inter
 ## まとめ
 
 核心は **OSへの委譲** だ。
+
+イベントリスナープログラムがCPUを消費しない理由は、結局「待つロジック」をOSに任せているからだ。  
+Javaは`epoll_wait()`でOSに委譲し、OSはhardware interruptでハードウェアに委譲する。
+
+この記事ではネットワークイベントを例に挙げたが、JSの`onClick()`のような高レベルのイベントリスナーも、深く掘り下げると結局epollを使っている。

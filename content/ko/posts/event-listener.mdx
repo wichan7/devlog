@@ -1,6 +1,6 @@
 ---
-title: 이벤트 리스너가 어떻게 동작하는지 설명해보세요
-description: Java 예시로 보여드림
+title: Java 이벤트 리스너는 어떻게 동작하는가?
+description: Java Nio 예시
 date: 2026-05-05
 tags:
   - OS
@@ -25,6 +25,8 @@ while (true) {
 
 ## Java의 실제 구현 (OS에 위임)
 
+* Spring은 서버 시작 시 내부적으로 `selector.select()`를 호출해 이벤트를 대기한다.
+
 [실제 구현](https://github.com/AdoptOpenJDK/openjdk-jdk11/blob/master/src/java.base/linux/classes/sun/nio/ch/EPollSelectorImpl.java)은 이렇다. (Java nio 클래스, 스프링 로그에 보이는 nio thread 맞음)
 ``` java
 // EPollSelectorImpl.java 중에서..
@@ -48,16 +50,19 @@ private int processEvents(int numEntries, Consumer<SelectionKey> action) {
 }
 ```
 
-1. selector.select()를 호출하는 순간 리눅스에서는 epoll_wait()를 호출
+1. selector.select()를 호출하는 순간, doSelect() 호출 -> 리눅스 epoll_wait() 호출
 
 2. OS는 해당 스레드를 Blocked 상태로 전환. 이 상태에서 CPU 점유율 0%
 
 3. 이벤트가 발생하면 커널이 스레드를 깨우면서 이벤트가 발생한 소켓(채널) 목록을 넘김
 
 
-## 그럼 hardware interrupt를 대기하는 로직은 어떻게 구현함?
+## 그럼 epoll_wait() 동안 이벤트를 리스닝하며 대기하는 로직도 결국 while (true) 아닌가?
 
-결론부터 말하자면 hardware interrupt는 이벤트 리스닝의 개념이 아니다.  
+그럼 epoll_wait()을 구현하기 위해, 또 결국 while(true) 와 같은 대기가 필요한게 아닌가? 라는 생각이 들었다.  
+
+예시 경우에서는 NIC로부터 패킷이 들어올 때 epoll_wait() 블로킹이 풀려야 하는데, 이 때 hardwareInterrupt가 사용된다.  
+
 컴퓨터 구조 강의에서 분명 들었던 것 같은데.. 진짜 듣기만 했나보다. 가물가물하다.  
 ![structure](/images/cs/cpu-interrupt.png)  
 
@@ -69,8 +74,13 @@ private int processEvents(int numEntries, Consumer<SelectionKey> action) {
 3. ISR이 커널에 이벤트를 알리고, 커널이 Blocked 상태였던 프로세스를 Ready 상태로 바꾼다.  
    ISR이 끝나면 저장해뒀던 PC, PSW를 복원하고 원래 프로세스로 돌아온다.
 
-CPU는 기본적으로 `while(true)`처럼 동작하기 때문에, `interrupt 대기`라는 말 자체가 잘못됐다. (interrupt 이므로)
+CPU는 기본적으로 `while(true)`처럼 뭔가 항상 하고 있기 때문에.. interrupt로 내꺼 먼저 처리해달라 요구하는 개념이다.  
 
 ## 결론
 
 핵심은 OS에 위임이다.  
+
+이벤트 리스너 프로그램이 CPU를 잡아먹지 않는 이유는, 결국 '기다리는 로직'을 OS에 맡기기 때문이다.  
+Java는 epoll_wait()로 OS에 위임하고, OS는 hardware interrupt로 하드웨어에 위임한다.
+
+글에서는 네트워크 이벤트를 예시로 들었으나, JS의 onClick() 과 같은 고수준 이벤트 리스너도 깊게 들어가면 결국 epoll을 사용한다.

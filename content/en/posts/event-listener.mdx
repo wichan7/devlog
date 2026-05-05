@@ -25,6 +25,8 @@ This checks for events non-stop. Naturally, CPU hits 100%.
 
 ## Java's Actual Implementation (Delegating to the OS)
 
+* Spring internally calls `selector.select()` at server startup to wait for events.
+
 The [actual implementation](https://github.com/AdoptOpenJDK/openjdk-jdk11/blob/master/src/java.base/linux/classes/sun/nio/ch/EPollSelectorImpl.java) looks like this. (This is the Java nio class — the same nio thread you see in Spring logs.)
 
 ```java
@@ -55,9 +57,12 @@ private int processEvents(int numEntries, Consumer<SelectionKey> action) {
 
 3. When an event occurs, the kernel wakes the thread and passes it a list of sockets (channels) that have activity.
 
-## So How Does Hardware Interrupt Waiting Work?
+## So Isn't the Waiting Logic Inside epoll_wait() Also a while(true)?
 
-To get to the point — waiting on a hardware interrupt is not the same concept as event listening.  
+I started wondering — to implement epoll_wait() itself, wouldn't there ultimately need to be some kind of while(true)-like waiting?
+
+In this example, the epoll_wait() block needs to be released when a packet arrives from the NIC — and that's where the hardware interrupt comes in.
+
 I'm pretty sure this was covered in my computer architecture course... but I must have just heard it and not really absorbed it. It's all a bit fuzzy now.
 
 ![structure](/images/cs/cpu-interrupt.png)
@@ -75,3 +80,8 @@ Because the CPU fundamentally operates like a `while(true)` loop, saying it "wai
 ## Conclusion
 
 The key takeaway is: **delegate to the OS**.
+
+The reason an event listener program doesn't eat up CPU is ultimately because it delegates the "waiting logic" to the OS.  
+Java delegates to the OS via `epoll_wait()`, and the OS in turn delegates to the hardware via hardware interrupts.
+
+This post used a network event as an example, but even high-level event listeners like JS's `onClick()` ultimately use epoll under the hood.
