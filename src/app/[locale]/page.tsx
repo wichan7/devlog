@@ -1,7 +1,7 @@
 import { allPosts } from "contentlayer/generated"
 import type { Metadata } from "next/types"
 import { getTranslations } from "next-intl/server"
-import { Link } from "@/i18n/navigation"
+import { PostList } from "@/components/post-list"
 
 interface HomeProps {
   params: {
@@ -34,19 +34,29 @@ export async function generateMetadata({
 export default function Home({ params }: HomeProps) {
   const { locale } = params
 
-  return (
-    <div className="prose max-w-none dark:prose-invert">
-      {allPosts
-        .filter((post) => post.locale === locale)
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .map((post) => (
-          <article key={post._id}>
-            <Link href={`/${post.slugAsParams}`}>
-              <h2>{post.title}</h2>
-            </Link>
-            {post.description && <p>{post.description}</p>}
-          </article>
-        ))}
-    </div>
-  )
+  const posts = allPosts
+    .filter((post) => post.locale === locale)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .map(({ _id, title, description, date, tags, slugAsParams }) => ({
+      _id,
+      title,
+      description,
+      date,
+      tags,
+      slugAsParams,
+    }))
+
+  const tagMap = posts
+    .flatMap((post) => post.tags)
+    .reduce(
+      (acc, tag) => {
+        acc[tag] = (acc[tag] || 0) + 1
+        return acc
+      },
+      {} as Record<string, number>,
+    )
+
+  const tags = Object.entries(tagMap).map(([name, count]) => ({ name, count }))
+
+  return <PostList posts={posts} tags={tags} locale={locale} />
 }

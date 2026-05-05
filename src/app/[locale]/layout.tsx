@@ -1,11 +1,9 @@
-import { allPosts } from "contentlayer/generated"
 import { notFound } from "next/navigation"
 import { hasLocale, NextIntlClientProvider } from "next-intl"
 import { getTranslations, setRequestLocale } from "next-intl/server"
 import { Analytics } from "@/components/analytics"
 import { LocaleSwitch } from "@/components/locale-switch"
 import { ModeToggle } from "@/components/mode-toggle"
-import { TagPopover } from "@/components/tag-popover"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Link } from "@/i18n/navigation"
 import { routing } from "@/i18n/routing"
@@ -27,69 +25,46 @@ export default async function LocaleLayout({
   setRequestLocale(locale)
   const t = await getTranslations()
 
-  const tagList = Object.entries(
-    allPosts
-      .filter((post) => post.locale === locale)
-      .flatMap((post) => post.tags)
-      .reduce(
-        (acc, tag) => {
-          acc[tag] = (acc[tag] || 0) + 1
-          return acc
-        },
-        {} as Record<string, number>,
-      ),
-  ).map(([name, count]) => ({ name, count }))
-
   return (
-    <html lang={locale}>
-      <body
-        className="antialiased min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-50 tabular-nums"
-      >
+    <html lang={locale} suppressHydrationWarning>
+      <body className="antialiased min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] tabular-nums">
         <NextIntlClientProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <div className="min-h-screen">
-              <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:16px_16px]" />
-              </div>
-
-              <div className="max-w-4xl mx-auto py-4 sm:py-6 px-3 sm:px-4 lg:px-8">
-                {/* 헤더 */}
-                <header className="sticky top-2 sm:top-4 z-50 mb-4 sm:mb-8">
-                  <div className="relative backdrop-blur-md bg-white/70 dark:bg-slate-900/70 rounded-xl sm:rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-slate-900/50 p-2 sm:p-4 transition-all duration-300">
-                    <div className="flex items-center justify-between gap-2 sm:gap-4 flex-wrap">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <ModeToggle />
-                        <LocaleSwitch currentLocale={locale} />
-                      </div>
-
-                      <nav className="flex items-center gap-1.5 sm:gap-3 ml-auto text-xs sm:text-sm font-medium">
-                        <Link
-                          href="/"
-                          className="relative px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg text-slate-700 dark:text-slate-300 transition-all duration-300 active:text-slate-900 dark:active:text-slate-50 group outline-none"
-                        >
-                          <span className="relative z-10">
-                            {t("menu.home")}
-                          </span>
-                          <span className="absolute inset-0 bg-slate-100 dark:bg-slate-800 rounded-lg opacity-0 group-active:opacity-100 transition-opacity duration-300 -z-0"></span>
-                        </Link>
-                        <Link
-                          href="/about"
-                          className="relative px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg text-slate-700 dark:text-slate-300 transition-all duration-300 active:text-slate-900 dark:active:text-slate-50 group outline-none"
-                        >
-                          <span className="relative z-10">
-                            {t("menu.about")}
-                          </span>
-                          <span className="absolute inset-0 bg-slate-100 dark:bg-slate-800 rounded-lg opacity-0 group-active:opacity-100 transition-opacity duration-300 -z-0"></span>
-                        </Link>
-                        <TagPopover tags={tagList} />
-                      </nav>
-                    </div>
+            <div className="max-w-3xl mx-auto py-4 sm:py-8 px-4 sm:px-6">
+              {/* 헤더 */}
+              <header className="sticky top-3 z-50 mb-6 sm:mb-10">
+                <div
+                  className="backdrop-blur-md rounded-2xl px-3 py-2 flex items-center justify-between gap-2"
+                  style={{
+                    background: "var(--color-bg-header)",
+                    border: "1px solid var(--color-border)",
+                    boxShadow:
+                      "rgba(0,0,0,0.04) 0px 2px 12px, rgba(0,0,0,0.02) 0px 1px 4px",
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <ModeToggle />
+                    <LocaleSwitch currentLocale={locale} />
                   </div>
-                </header>
-                <main className="animate-fade-in bg-white/80 dark:bg-slate-800/60 rounded-2xl px-4 sm:px-12 py-4 backdrop-blur-sm border border-slate-200/60 dark:border-slate-700/60 shadow-xl shadow-slate-200/60 dark:shadow-slate-900/60">
-                  {children}
-                </main>
-              </div>
+
+                  <nav className="flex items-center gap-0.5 ml-auto text-sm font-medium">
+                    <Link
+                      href="/"
+                      className="px-3 py-1.5 rounded-lg text-[var(--color-text-2)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] transition-all duration-150"
+                    >
+                      {t("menu.home")}
+                    </Link>
+                    <Link
+                      href="/about"
+                      className="px-3 py-1.5 rounded-lg text-[var(--color-text-2)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] transition-all duration-150"
+                    >
+                      {t("menu.about")}
+                    </Link>
+                  </nav>
+                </div>
+              </header>
+
+              <main className="animate-fade-in">{children}</main>
             </div>
             <Analytics />
           </ThemeProvider>

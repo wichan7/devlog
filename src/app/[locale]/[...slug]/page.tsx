@@ -64,11 +64,23 @@ export default async function PagePage({ params }: PageProps) {
   }
 
   return (
-    <article className="py-6 prose max-w-none dark:prose-invert">
-      <h1>{page.title}</h1>
-      {page.description && <p className="text-xl">{page.description}</p>}
-      <hr />
-      <Mdx code={page.body.code} />
+    <article className="py-4">
+      <header className="mb-8 pb-6" style={{ borderBottom: "1px solid var(--color-border)" }}>
+        <h1
+          className="text-3xl sm:text-4xl font-bold leading-tight mb-2"
+          style={{ letterSpacing: "-0.03em", color: "var(--color-text)" }}
+        >
+          {page.title}
+        </h1>
+        {page.description && (
+          <p className="text-base leading-relaxed" style={{ color: "var(--color-text-2)" }}>
+            {page.description}
+          </p>
+        )}
+      </header>
+      <div className="prose max-w-none dark:prose-invert">
+        <Mdx code={page.body.code} />
+      </div>
     </article>
   )
 }

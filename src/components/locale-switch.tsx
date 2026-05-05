@@ -1,5 +1,6 @@
 "use client"
 
+import { Popover, PopoverButton, PopoverPanel } from "@headlessui/react"
 import EarthIcon from "@/assets/svg/earth.svg"
 import i18nConfig from "@/i18n/constant.json"
 import { usePathname, useRouter } from "@/i18n/navigation"
@@ -12,31 +13,55 @@ export function LocaleSwitch({ currentLocale }: LocaleSwitchProps) {
   const router = useRouter()
   const pathname = usePathname()
 
-  const changeLocale = (newLocale: string) => {
+  const changeLocale = (newLocale: string, close: () => void) => {
     router.push(pathname, { locale: newLocale })
-  }
-
-  const handleClick = () => {
-    const currentIndex = i18nConfig.locales.findIndex(
-      (locale) => locale === currentLocale,
-    )
-    const nextIndex = (currentIndex + 1) % i18nConfig.locales.length
-    const nextLocale = i18nConfig.locales.at(nextIndex)
-
-    nextLocale && changeLocale(nextLocale)
+    close()
   }
 
   return (
-    <button
-      className="relative border border-slate-200 dark:border-slate-700 rounded-lg w-auto h-10 flex items-center justify-center gap-2 px-3 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm transition-all duration-300 active:bg-slate-100 dark:active:bg-slate-700 active:shadow-md active:scale-105 active:scale-95 group"
-      onClick={handleClick}
-    >
-      <span className="sr-only">Toggle locale</span>
-      <EarthIcon className="w-4 h-4 text-slate-700 dark:text-slate-300" />
-      <span className="text-sm font-medium text-slate-700 dark:text-slate-300 uppercase">
-        {currentLocale}
-      </span>
-      <span className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-500/0 via-purple-500/0 to-pink-500/0 group-active:from-blue-500/10 group-active:via-purple-500/10 group-active:to-pink-500/10 transition-all duration-300 opacity-0 group-active:opacity-100" />
-    </button>
+    <Popover className="relative">
+      {({ close }) => (
+        <>
+          <PopoverButton
+            className="h-9 flex items-center px-2.5 rounded-xl transition-all duration-150 hover:bg-[var(--color-bg-2)] active:scale-95 outline-none"
+            style={{
+              border: "1px solid var(--color-border)",
+              color: "var(--color-text-2)",
+            }}
+            aria-label="Switch locale"
+          >
+            <EarthIcon className="w-3.5 h-3.5" />
+          </PopoverButton>
+
+          <PopoverPanel
+            anchor="bottom start"
+            className="py-1 rounded-xl overflow-hidden z-50 !mt-1"
+            style={{
+              border: "1px solid var(--color-border)",
+              background: "var(--color-bg)",
+              boxShadow:
+                "rgba(0,0,0,0.12) 0px 16px 48px, rgba(0,0,0,0.06) 0px 4px 16px",
+              minWidth: "5rem",
+            }}
+          >
+            {i18nConfig.locales.map((locale) => (
+              <button
+                key={locale}
+                onClick={() => changeLocale(locale, close)}
+                className="w-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-left transition-colors hover:bg-[var(--color-bg-2)]"
+                style={{
+                  color:
+                    locale === currentLocale
+                      ? "var(--color-primary)"
+                      : "var(--color-text-2)",
+                }}
+              >
+                {locale}
+              </button>
+            ))}
+          </PopoverPanel>
+        </>
+      )}
+    </Popover>
   )
 }
