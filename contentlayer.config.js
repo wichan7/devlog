@@ -16,6 +16,13 @@ const computedFields = {
     type: "string",
     resolve: (doc) => doc._raw.sourceFilePath.split("/")[0], // /ko/posts/abc.mdx → 'ko'
   },
+  thumbnail: {
+    type: "string",
+    resolve: (doc) => {
+      const match = doc.body.raw.match(/!\[.*?\]\((.+?)\)/)
+      return match ? match[1] : null
+    },
+  },
 }
 
 export const Page = defineDocumentType(() => ({

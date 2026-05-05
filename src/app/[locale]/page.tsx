@@ -37,13 +37,14 @@ export default function Home({ params }: HomeProps) {
   const posts = allPosts
     .filter((post) => post.locale === locale)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .map(({ _id, title, description, date, tags, slugAsParams }) => ({
+    .map(({ _id, title, description, date, tags, slugAsParams, thumbnail }) => ({
       _id,
       title,
       description,
       date,
       tags,
       slugAsParams,
+      thumbnail,
     }))
 
   const tagMap = posts
