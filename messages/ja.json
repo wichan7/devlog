@@ -7,6 +7,10 @@
     "home": "ホーム",
     "about": "紹介"
   },
+  "notFound": {
+    "message": "ページが見つかりません。",
+    "back": "ホームに戻る"
+  },
   "tags": {
     "all": "すべて",
     "expand": "もっと見る",
