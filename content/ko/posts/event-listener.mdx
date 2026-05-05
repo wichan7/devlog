@@ -1,0 +1,76 @@
+---
+title: 이벤트 리스너가 어떻게 동작하는지 설명해보세요
+description: Java 예시로 보여드림
+date: 2026-05-05
+tags:
+  - OS
+  - Backend
+---
+
+요새 일에 여유가 생겼는지.. 개발하다가 뜬금 없이 이벤트 리스너가 어떻게 구현 된건지 궁금했다.  
+
+단순 `while(true)`로 동작한다면 별 찍기를 잘못 구현했을 때처럼 CPU 100%를 칠텐데, 실제로 Spring 서버를 띄워 놓고 보면 거의 0%를 유지한다.  
+
+## 간단한 구현
+
+```java
+while (true) {
+    if (eventOccurred()) {
+        doSomething();
+    }
+}
+```
+
+쉬지 않고 이벤트가 발생했는지 체크한다. 당연히 CPU는 100%가 찍힌다.  
+
+## Java의 실제 구현 (OS에 위임)
+
+[실제 구현](https://github.com/AdoptOpenJDK/openjdk-jdk11/blob/master/src/java.base/linux/classes/sun/nio/ch/EPollSelectorImpl.java)은 이렇다. (Java nio 클래스, 스프링 로그에 보이는 nio thread 맞음)
+``` java
+// EPollSelectorImpl.java 중에서..
+@Override
+protected int doSelect(Consumer<SelectionKey> action, long timeout) throws IOException {
+    int numEntries;
+
+    int to = (int) Math.min(timeout, Integer.MAX_VALUE);                   // 안전하게 timeout 처리
+    numEntries = EPoll.wait(epfd, pollArrayAddress, NUM_EPOLLEVENTS, to);  // 리눅스의 epoll_wait() 호출, 이벤트 발생 전까지 스레드는 Blocked 상태가 되어 CPU 점유 X
+    
+    return processEvents(numEntries, action);     // OS로부터 wake-up 이벤트 발생하면 block 풀리고, numEntries 반환
+}
+
+private int processEvents(int numEntries, Consumer<SelectionKey> action) {
+    for (int i=0; i<numEntries; i++) {
+        long event = EPoll.getEvent(pollArrayAddress, i);
+        int fd = EPoll.getDescriptor(event);     // fileDescriptor offset 획득
+        // ... 생략
+        processReadyEvents(...) // 핸들러 실행
+    }
+}
+```
+
+1. selector.select()를 호출하는 순간 리눅스에서는 epoll_wait()를 호출
+
+2. OS는 해당 스레드를 Blocked 상태로 전환. 이 상태에서 CPU 점유율 0%
+
+3. 이벤트가 발생하면 커널이 스레드를 깨우면서 이벤트가 발생한 소켓(채널) 목록을 넘김
+
+
+## 그럼 hardware interrupt를 대기하는 로직은 어떻게 구현함?
+
+결론부터 말하자면 hardware interrupt는 이벤트 리스닝의 개념이 아니다.  
+컴퓨터 구조 강의에서 분명 들었던 것 같은데.. 진짜 듣기만 했나보다. 가물가물하다.  
+![structure](/images/cs/cpu-interrupt.png)  
+
+1. NIC가 패킷을 수신하면, PIC를 통해 CPU에 IRQ 신호를 쏜다.  
+
+2. CPU는 매 명령어 사이클이 끝날 때마다 Interrupt request bit를 체크한다.  
+   인터럽트가 감지되면 현재 PC와 PSW를 저장하고, ISR(Interrupt Service Routine) 주소로 점프한다.  
+
+3. ISR이 커널에 이벤트를 알리고, 커널이 Blocked 상태였던 프로세스를 Ready 상태로 바꾼다.  
+   ISR이 끝나면 저장해뒀던 PC, PSW를 복원하고 원래 프로세스로 돌아온다.
+
+CPU는 기본적으로 `while(true)`처럼 동작하기 때문에, `interrupt 대기`라는 말 자체가 잘못됐다. (interrupt 이므로)
+
+## 결론
+
+핵심은 OS에 위임이다.  
