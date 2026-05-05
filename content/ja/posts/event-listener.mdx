@@ -1,0 +1,77 @@
+---
+title: イベントリスナーの仕組みを解説する
+description: Javaの実例で紹介
+date: 2026-05-05
+tags:
+  - OS
+  - Backend
+---
+
+最近、仕事に少し余裕が出てきたのか…コーディング中にふと、イベントリスナーがどのように実装されているのか気になった。
+
+単純に `while(true)` で動いているなら、星を出力するプログラムをうまく書けなかったときのようにCPUが100%に張り付くはずだ。でも実際にSpringサーバーを立ち上げて確認すると、ほぼ0%を維持している。
+
+## シンプルな実装
+
+```java
+while (true) {
+    if (eventOccurred()) {
+        doSomething();
+    }
+}
+```
+
+休みなくイベントが発生したかをチェックし続ける。当然、CPUは100%に達する。
+
+## Javaの実際の実装（OSへの委譲）
+
+[実際の実装](https://github.com/AdoptOpenJDK/openjdk-jdk11/blob/master/src/java.base/linux/classes/sun/nio/ch/EPollSelectorImpl.java)はこうなっている。（Java nioクラス、Springのログにあるあのnioスレッドで合っている）
+
+```java
+// EPollSelectorImpl.java より抜粋
+@Override
+protected int doSelect(Consumer<SelectionKey> action, long timeout) throws IOException {
+    int numEntries;
+
+    int to = (int) Math.min(timeout, Integer.MAX_VALUE);                   // タイムアウトを安全に処理
+    numEntries = EPoll.wait(epfd, pollArrayAddress, NUM_EPOLLEVENTS, to);  // LinuxのepollWait()を呼び出し、イベント発生までスレッドはBlocked状態となりCPU使用率0%
+   
+    return processEvents(numEntries, action);     // OSからwakeupイベントが来るとブロックが解除され、numEntriesを返す
+}
+
+private int processEvents(int numEntries, Consumer<SelectionKey> action) {
+    for (int i=0; i<numEntries; i++) {
+        long event = EPoll.getEvent(pollArrayAddress, i);
+        int fd = EPoll.getDescriptor(event);     // ファイルディスクリプタのオフセットを取得
+        // ... 省略
+        processReadyEvents(...) // ハンドラを実行
+    }
+}
+```
+
+1. `selector.select()` を呼び出した瞬間、Linuxは `epoll_wait()` を呼び出す。
+
+2. OSはそのスレッドを **Blocked** 状態に切り替える。この状態ではCPU使用率は0%。
+
+3. イベントが発生すると、カーネルがスレッドを起こし、イベントが発生したソケット（チャネル）の一覧を渡す。
+
+## ではhardware interruptを待つロジックはどう実装されているのか？
+
+結論から言うと、ハードウェア割り込みはイベントリスニングとは別の概念だ。  
+コンピュータアーキテクチャの講義で確かに聞いた気がするが…聞いただけだったようだ。うろ覚えだ。
+
+![structure](/images/cs/cpu-interrupt.png)
+
+1. NICがパケットを受信すると、PICを通じてCPUにIRQ信号を送る。
+
+2. CPUは命令サイクルが終わるたびに **Interrupt Request bit** を確認する。  
+   割り込みが検出されると、現在のPCとPSWを保存し、ISR（Interrupt Service Routine）のアドレスへジャンプする。
+
+3. ISRがカーネルにイベントを通知し、カーネルが **Blocked** 状態だったプロセスを **Ready** 状態に変える。  
+   ISRが終了すると、保存していたPCとPSWを復元し、元のプロセスに戻る。
+
+CPUは基本的に `while(true)` のように動作しているため、「interrupt を待つ」という表現自体が厳密には誤りだ。（あくまでも *interrupt*、割り込みなのだから）
+
+## まとめ
+
+核心は **OSへの委譲** だ。

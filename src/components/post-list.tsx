@@ -116,7 +116,7 @@ export function PostList({ posts, tags, locale }: PostListProps) {
                 {post.description && (
                   <p
                     className="text-sm leading-relaxed line-clamp-2"
-                    style={{ color: "var(--color-text-2)" }}
+                    style={{ color: "var(--color-text-1)" }}
                   >
                     {post.description}
                   </p>
@@ -131,7 +131,11 @@ export function PostList({ posts, tags, locale }: PostListProps) {
               {post.thumbnail && (
                 <div
                   className="flex-none w-20 h-20 rounded-md overflow-hidden relative"
-                  style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-border)", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}
+                  style={{
+                    background: "var(--color-bg-2)",
+                    border: "1px solid var(--color-border)",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                  }}
                 >
                   <Image
                     src={post.thumbnail}

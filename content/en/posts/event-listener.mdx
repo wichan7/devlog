@@ -1,0 +1,77 @@
+---
+title: How Event Listeners Work
+description: Explained with Java examples
+date: 2026-05-05
+tags:
+  - OS
+  - Backend
+---
+
+Maybe things have been a bit slower at work lately... I was coding the other day when I randomly got curious about how event listeners are actually implemented.
+
+If they just ran on a plain `while(true)` loop, they'd be pegging the CPU at 100% — like a poorly written star-printing program. But when you actually run a Spring server and check, it hovers near 0%.
+
+## Naive Implementation
+
+```java
+while (true) {
+    if (eventOccurred()) {
+        doSomething();
+    }
+}
+```
+
+This checks for events non-stop. Naturally, CPU hits 100%.
+
+## Java's Actual Implementation (Delegating to the OS)
+
+The [actual implementation](https://github.com/AdoptOpenJDK/openjdk-jdk11/blob/master/src/java.base/linux/classes/sun/nio/ch/EPollSelectorImpl.java) looks like this. (This is the Java nio class — the same nio thread you see in Spring logs.)
+
+```java
+// From EPollSelectorImpl.java
+@Override
+protected int doSelect(Consumer<SelectionKey> action, long timeout) throws IOException {
+    int numEntries;
+
+    int to = (int) Math.min(timeout, Integer.MAX_VALUE);                   // Safe timeout handling
+    numEntries = EPoll.wait(epfd, pollArrayAddress, NUM_EPOLLEVENTS, to);  // Calls Linux's epoll_wait(); thread enters Blocked state until an event occurs — no CPU usage
+   
+    return processEvents(numEntries, action);     // When the OS wakes the thread, the block is released and numEntries is returned
+}
+
+private int processEvents(int numEntries, Consumer<SelectionKey> action) {
+    for (int i=0; i<numEntries; i++) {
+        long event = EPoll.getEvent(pollArrayAddress, i);
+        int fd = EPoll.getDescriptor(event);     // Get file descriptor offset
+        // ... omitted
+        processReadyEvents(...) // Execute handler
+    }
+}
+```
+
+1. The moment `selector.select()` is called, Linux calls `epoll_wait()` under the hood.
+
+2. The OS puts the thread into a **Blocked** state. CPU usage is 0% at this point.
+
+3. When an event occurs, the kernel wakes the thread and passes it a list of sockets (channels) that have activity.
+
+## So How Does Hardware Interrupt Waiting Work?
+
+To get to the point — waiting on a hardware interrupt is not the same concept as event listening.  
+I'm pretty sure this was covered in my computer architecture course... but I must have just heard it and not really absorbed it. It's all a bit fuzzy now.
+
+![structure](/images/cs/cpu-interrupt.png)
+
+1. When the NIC receives a packet, it sends an IRQ signal to the CPU via the PIC.
+
+2. The CPU checks the **Interrupt Request bit** at the end of every instruction cycle.  
+   When an interrupt is detected, it saves the current PC and PSW, then jumps to the ISR (Interrupt Service Routine) address.
+
+3. The ISR notifies the kernel of the event, and the kernel transitions the previously **Blocked** process to the **Ready** state.  
+   Once the ISR finishes, the saved PC and PSW are restored, and execution returns to the original process.
+
+Because the CPU fundamentally operates like a `while(true)` loop, saying it "waits for an interrupt" is actually a misnomer — it's an *interrupt*, after all.
+
+## Conclusion
+
+The key takeaway is: **delegate to the OS**.
