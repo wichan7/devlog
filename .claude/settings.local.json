@@ -3,7 +3,11 @@
     "allow": [
       "Bash(grep -h \"^tags:\" D:\\\\workspace\\\\devlog\\\\content\\\\ko\\\\posts\\\\*.mdx | sort | uniq -c | sort -rn | head -30)",
       "Bash(grep -h \"^title:\" D:\\\\workspace\\\\devlog\\\\content\\\\ko\\\\posts\\\\*.mdx)",
-      "Bash(for f:*)"
+      "Bash(for f:*)",
+      "Bash(New-Item -ItemType Directory -Force \"D:\\\\workspace\\\\devlog\\\\src\\\\lib\")",
+      "Bash(Out-Null)",
+      "Bash(Write-Output \"done\")",
+      "Bash(pnpm add *)"
     ]
   }
 }

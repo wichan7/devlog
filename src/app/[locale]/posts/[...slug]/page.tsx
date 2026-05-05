@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 import Giscus from "@/components/giscus"
 import { Mdx } from "@/components/mdx-components"
 import { Link } from "@/i18n/navigation"
+import { formatDate } from "@/lib/format-date"
 
 interface PostProps {
   params: {
@@ -65,26 +66,50 @@ export default async function PostPage({ params }: PostProps) {
   }
 
   return (
-    <article className="py-6 prose max-w-none dark:prose-invert">
-      <h1 className="mb-2">{post.title}</h1>
-      {post.description && (
-        <p className="text-xl mt-0 text-slate-700 dark:text-slate-200">
-          {post.description}
-        </p>
-      )}
-      <hr className="my-4" />
-      <Mdx code={post.body.code} />
-      <div className="not-prose flex flex-wrap gap-2 mt-8">
-        {post.tags.map((tag) => (
-          <Link
-            key={tag}
-            href={`/tags/${tag}`}
-            className="px-3 py-1 text-sm rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+    <article className="py-4">
+      {/* Article header */}
+      <header
+        className="mb-8 pb-6"
+        style={{ borderBottom: "1px solid var(--color-border)" }}
+      >
+        <h1
+          className="text-3xl sm:text-4xl font-bold leading-tight mb-3"
+          style={{ letterSpacing: "-0.03em", color: "var(--color-text)" }}
+        >
+          {post.title}
+        </h1>
+        {post.description && (
+          <p
+            className="text-base leading-relaxed mb-4"
+            style={{ color: "var(--color-text-2)" }}
           >
-            {tag}
-          </Link>
-        ))}
+            {post.description}
+          </p>
+        )}
+        <time className="text-xs" style={{ color: "var(--color-text-3)" }}>
+          {formatDate(post.date, params.locale)}
+        </time>
+      </header>
+
+      {/* Article body */}
+      <div className="prose max-w-none dark:prose-invert">
+        <Mdx code={post.body.code} />
       </div>
+
+      {/* Tags */}
+      {post.tags.length > 0 && (
+        <footer
+          className="mt-10 pt-6 flex flex-wrap gap-2"
+          style={{ borderTop: "1px solid var(--color-border)" }}
+        >
+          {post.tags.map((tag) => (
+            <Link key={tag} href={`/tags/${tag}`} className="warm-tag">
+              {tag}
+            </Link>
+          ))}
+        </footer>
+      )}
+
       <Giscus currentLocale={params.locale} />
     </article>
   )
