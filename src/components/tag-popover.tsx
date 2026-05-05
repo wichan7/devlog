@@ -16,8 +16,6 @@ export function TagPopover({ tags }: TagPopoverProps) {
       <PopoverButton
         className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors duration-150 outline-none"
         style={{ color: "var(--color-text-2)" }}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--color-text)" }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--color-text-2)" }}
       >
         {t("menu.tag")}
       </PopoverButton>
