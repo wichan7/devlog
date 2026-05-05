@@ -7,7 +7,10 @@
       "Bash(New-Item -ItemType Directory -Force \"D:\\\\workspace\\\\devlog\\\\src\\\\lib\")",
       "Bash(Out-Null)",
       "Bash(Write-Output \"done\")",
-      "Bash(pnpm add *)"
+      "Bash(pnpm add *)",
+      "Bash(Get-ChildItem -Path \"D:\\\\workspace\\\\devlog\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(Sort-Object PSIsContainer -Descending)"
     ]
   }
 }

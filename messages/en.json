@@ -7,6 +7,10 @@
     "home": "Home",
     "about": "About"
   },
+  "notFound": {
+    "message": "Page not found.",
+    "back": "Back to home"
+  },
   "tags": {
     "all": "All",
     "expand": "More",
