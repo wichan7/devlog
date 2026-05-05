@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { Link } from "@/i18n/navigation"
@@ -14,6 +15,7 @@ type Post = {
   date: string
   tags: string[]
   slugAsParams: string
+  thumbnail?: string | null
 }
 
 type Tag = {
@@ -97,27 +99,49 @@ export function PostList({ posts, tags, locale }: PostListProps) {
       <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
         {filteredPosts.map((post) => (
           <article key={post._id} className="group py-7 first:pt-1">
-            <Link href={`/${post.slugAsParams}`} className="block space-y-1.5">
-              <h2
-                className="text-lg font-semibold leading-snug transition-colors duration-150 group-hover:text-[var(--color-accent)]"
-                style={{ letterSpacing: "-0.02em", color: "var(--color-text)" }}
-              >
-                {post.title}
-              </h2>
-              {post.description && (
-                <p
-                  className="text-sm leading-relaxed line-clamp-2"
-                  style={{ color: "var(--color-text-2)" }}
+            <Link
+              href={`/${post.slugAsParams}`}
+              className="flex gap-4 items-start"
+            >
+              <div className="flex-1 min-w-0 space-y-1.5">
+                <h2
+                  className="text-lg font-semibold leading-snug transition-colors duration-150 group-hover:text-[var(--color-accent)]"
+                  style={{
+                    letterSpacing: "-0.02em",
+                    color: "var(--color-text)",
+                  }}
                 >
-                  {post.description}
-                </p>
+                  {post.title}
+                </h2>
+                {post.description && (
+                  <p
+                    className="text-sm leading-relaxed line-clamp-2"
+                    style={{ color: "var(--color-text-2)" }}
+                  >
+                    {post.description}
+                  </p>
+                )}
+                <time
+                  className="block text-xs pt-0.5"
+                  style={{ color: "var(--color-text-3)" }}
+                >
+                  {formatDate(post.date, locale)}
+                </time>
+              </div>
+              {post.thumbnail && (
+                <div
+                  className="flex-none w-20 h-20 rounded-md overflow-hidden relative"
+                  style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-border)", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}
+                >
+                  <Image
+                    src={post.thumbnail}
+                    alt=""
+                    fill
+                    sizes="320px"
+                    className="object-cover"
+                  />
+                </div>
               )}
-              <time
-                className="block text-xs pt-0.5"
-                style={{ color: "var(--color-text-3)" }}
-              >
-                {formatDate(post.date, locale)}
-              </time>
             </Link>
           </article>
         ))}
