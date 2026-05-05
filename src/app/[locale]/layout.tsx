@@ -1,11 +1,9 @@
-import { allPosts } from "contentlayer/generated"
 import { notFound } from "next/navigation"
 import { hasLocale, NextIntlClientProvider } from "next-intl"
 import { getTranslations, setRequestLocale } from "next-intl/server"
 import { Analytics } from "@/components/analytics"
 import { LocaleSwitch } from "@/components/locale-switch"
 import { ModeToggle } from "@/components/mode-toggle"
-import { TagPopover } from "@/components/tag-popover"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Link } from "@/i18n/navigation"
 import { routing } from "@/i18n/routing"
@@ -26,19 +24,6 @@ export default async function LocaleLayout({
 
   setRequestLocale(locale)
   const t = await getTranslations()
-
-  const tagList = Object.entries(
-    allPosts
-      .filter((post) => post.locale === locale)
-      .flatMap((post) => post.tags)
-      .reduce(
-        (acc, tag) => {
-          acc[tag] = (acc[tag] || 0) + 1
-          return acc
-        },
-        {} as Record<string, number>,
-      ),
-  ).map(([name, count]) => ({ name, count }))
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -75,7 +60,6 @@ export default async function LocaleLayout({
                     >
                       {t("menu.about")}
                     </Link>
-                    <TagPopover tags={tagList} />
                   </nav>
                 </div>
               </header>

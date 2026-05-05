@@ -155,6 +155,15 @@
   border-color: rgba(242, 241, 237, 0.1);
 }
 
+/* ── Scrollbar hide ── */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* ── Warm tag pill ── */
 .warm-tag {
   display: inline-flex;

@@ -5,7 +5,11 @@
   },
   "menu": {
     "home": "Home",
-    "about": "About",
-    "tag": "Tag"
+    "about": "About"
+  },
+  "tags": {
+    "all": "All",
+    "expand": "More",
+    "collapse": "Less"
   }
 }

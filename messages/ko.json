@@ -5,7 +5,11 @@
   },
   "menu": {
     "home": "홈",
-    "about": "소개",
-    "tag": "태그"
+    "about": "소개"
+  },
+  "tags": {
+    "all": "전체",
+    "expand": "펼치기",
+    "collapse": "접기"
   }
 }

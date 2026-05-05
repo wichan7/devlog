@@ -1,8 +1,7 @@
 import { allPosts } from "contentlayer/generated"
 import type { Metadata } from "next/types"
 import { getTranslations } from "next-intl/server"
-import { Link } from "@/i18n/navigation"
-import { formatDate } from "@/lib/format-date"
+import { PostList } from "@/components/post-list"
 
 interface HomeProps {
   params: {
@@ -38,38 +37,26 @@ export default function Home({ params }: HomeProps) {
   const posts = allPosts
     .filter((post) => post.locale === locale)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .map(({ _id, title, description, date, tags, slugAsParams }) => ({
+      _id,
+      title,
+      description,
+      date,
+      tags,
+      slugAsParams,
+    }))
 
-  return (
-    <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
-      {posts.map((post) => (
-        <article key={post._id} className="group py-7 first:pt-1">
-          <Link href={`/${post.slugAsParams}`} className="block space-y-1.5">
-            <h2
-              className="text-lg font-semibold leading-snug transition-colors duration-150 group-hover:text-[var(--color-accent)]"
-              style={{
-                letterSpacing: "-0.02em",
-                color: "var(--color-text)",
-              }}
-            >
-              {post.title}
-            </h2>
-            {post.description && (
-              <p
-                className="text-sm leading-relaxed line-clamp-2"
-                style={{ color: "var(--color-text-2)" }}
-              >
-                {post.description}
-              </p>
-            )}
-            <time
-              className="block text-xs pt-0.5"
-              style={{ color: "var(--color-text-3)" }}
-            >
-              {formatDate(post.date, locale)}
-            </time>
-          </Link>
-        </article>
-      ))}
-    </div>
-  )
+  const tagMap = posts
+    .flatMap((post) => post.tags)
+    .reduce(
+      (acc, tag) => {
+        acc[tag] = (acc[tag] || 0) + 1
+        return acc
+      },
+      {} as Record<string, number>,
+    )
+
+  const tags = Object.entries(tagMap).map(([name, count]) => ({ name, count }))
+
+  return <PostList posts={posts} tags={tags} locale={locale} />
 }

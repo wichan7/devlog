@@ -5,7 +5,11 @@
   },
   "menu": {
     "home": "ホーム",
-    "about": "紹介",
-    "tag": "タグ"
+    "about": "紹介"
+  },
+  "tags": {
+    "all": "すべて",
+    "expand": "もっと見る",
+    "collapse": "閉じる"
   }
 }
