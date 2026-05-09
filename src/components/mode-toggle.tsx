@@ -5,7 +5,7 @@ import { useEffect, useState } from "react"
 import DayIcon from "@/assets/svg/day.svg"
 import NightIcon from "@/assets/svg/night.svg"
 
-export function ModeToggle() {
+export function ThemeToggle() {
   const { setTheme, resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
