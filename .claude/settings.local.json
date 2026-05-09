@@ -10,7 +10,12 @@
       "Bash(pnpm add *)",
       "Bash(Get-ChildItem -Path \"D:\\\\workspace\\\\devlog\" -Force)",
       "Bash(Select-Object Name, PSIsContainer)",
-      "Bash(Sort-Object PSIsContainer -Descending)"
+      "Bash(Sort-Object PSIsContainer -Descending)",
+      "Bash(Get-ChildItem -Path \"D:\\\\workspace\\\\devlog\\\\src\\\\app\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(pnpm build *)",
+      "Bash(Select-String -Pattern \"node-rss|rss\")",
+      "Bash(Get-Content *)"
     ]
   }
 }

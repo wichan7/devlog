@@ -3,7 +3,8 @@ import { hasLocale, NextIntlClientProvider } from "next-intl"
 import { getTranslations, setRequestLocale } from "next-intl/server"
 import { Analytics } from "@/components/analytics"
 import { LocaleSwitch } from "@/components/locale-switch"
-import { ModeToggle } from "@/components/mode-toggle"
+import { ThemeToggle } from "@/components/mode-toggle"
+import { RssButton } from "@/components/rss-button"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Link } from "@/i18n/navigation"
 import { routing } from "@/i18n/routing"
@@ -24,6 +25,8 @@ export default async function LocaleLayout({
 
   setRequestLocale(locale)
   const t = await getTranslations()
+  const feedUrl =
+    locale === routing.defaultLocale ? "/feed.xml" : `/${locale}/feed.xml`
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -43,8 +46,9 @@ export default async function LocaleLayout({
                   }}
                 >
                   <div className="flex items-center gap-2">
-                    <ModeToggle />
+                    <ThemeToggle />
                     <LocaleSwitch currentLocale={locale} />
+                    <RssButton href={feedUrl} />
                   </div>
 
                   <nav className="flex items-center gap-0.5 ml-auto text-sm font-medium">
