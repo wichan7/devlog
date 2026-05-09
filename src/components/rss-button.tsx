@@ -11,6 +11,7 @@ export function RssButton({ href }: { href: string }) {
         border: "1px solid var(--color-border)",
         color: "var(--color-text-2)",
       }}
+      target="_blank"
       title="RSS"
     >
       <RssIcon className="w-4 h-4" />
