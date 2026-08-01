@@ -6,29 +6,41 @@
 
 @layer base {
   :root {
-    --color-bg: #f2f1ed;
-    --color-bg-2: #ebeae5;
-    --color-bg-3: #e6e5e0;
-    --color-bg-header: rgba(242, 241, 237, 0.92);
-    --color-text: #26251e;
-    --color-text-2: rgba(38, 37, 30, 0.55);
-    --color-text-3: rgba(38, 37, 30, 0.38);
-    --color-accent: #f54e00;
-    --color-crimson: #cf2d56;
-    --color-border: rgba(38, 37, 30, 0.1);
-    --color-border-md: rgba(38, 37, 30, 0.2);
+    --color-bg: #f6f3ed;
+    --color-bg-2: #e8e2d8;
+    --color-bg-3: #dcd3c5;
+    --color-bg-header: rgba(246, 243, 237, 0.92);
+    --color-text: #211e18;
+    --color-text-2: rgba(33, 30, 24, 0.68);
+    --color-text-3: rgba(33, 30, 24, 0.48);
+    --color-accent: #e64900;
+    --color-accent-muted: rgba(230, 73, 0, 0.5);
+    --color-accent-border: rgba(230, 73, 0, 0.4);
+    --color-crimson: #b91f4b;
+    --color-code-bg: #211e18;
+    --color-code-text: #f6f3ed;
+    --color-code-muted: rgba(246, 243, 237, 0.4);
+    --color-code-inline: #fb7185;
+    --color-border: rgba(33, 30, 24, 0.16);
+    --color-border-md: rgba(33, 30, 24, 0.28);
   }
 
   .dark {
-    --color-bg: #1a1914;
-    --color-bg-2: #26251e;
-    --color-bg-3: #2e2d24;
-    --color-bg-header: rgba(26, 25, 20, 0.92);
-    --color-text: #f2f1ed;
-    --color-text-2: rgba(242, 241, 237, 0.55);
-    --color-text-3: rgba(242, 241, 237, 0.38);
-    --color-border: rgba(242, 241, 237, 0.1);
-    --color-border-md: rgba(242, 241, 237, 0.2);
+    --color-bg: #15130f;
+    --color-bg-2: #252118;
+    --color-bg-3: #373125;
+    --color-bg-header: rgba(21, 19, 15, 0.92);
+    --color-text: #f6f3ed;
+    --color-text-2: rgba(246, 243, 237, 0.7);
+    --color-text-3: rgba(246, 243, 237, 0.5);
+    --color-accent-muted: rgba(230, 73, 0, 0.5);
+    --color-accent-border: rgba(230, 73, 0, 0.4);
+    --color-code-bg: #211e18;
+    --color-code-text: #f6f3ed;
+    --color-code-muted: rgba(246, 243, 237, 0.4);
+    --color-code-inline: #fb7185;
+    --color-border: rgba(246, 243, 237, 0.15);
+    --color-border-md: rgba(246, 243, 237, 0.28);
   }
 
   html {
@@ -48,40 +60,40 @@
 /* ── Prose typography variable overrides ── */
 .prose {
   /* light mode */
-  --tw-prose-body: #26251e;
-  --tw-prose-headings: #26251e;
-  --tw-prose-lead: rgba(38, 37, 30, 0.6);
-  --tw-prose-links: #f54e00;
-  --tw-prose-bold: #26251e;
-  --tw-prose-counters: rgba(38, 37, 30, 0.5);
-  --tw-prose-bullets: rgba(38, 37, 30, 0.28);
-  --tw-prose-hr: rgba(38, 37, 30, 0.1);
-  --tw-prose-quotes: rgba(38, 37, 30, 0.8);
-  --tw-prose-quote-borders: rgba(38, 37, 30, 0.22);
-  --tw-prose-captions: rgba(38, 37, 30, 0.5);
-  --tw-prose-code: #cf2d56;
-  --tw-prose-pre-code: #f2f1ed;
-  --tw-prose-pre-bg: #26251e;
-  --tw-prose-th-borders: rgba(38, 37, 30, 0.2);
-  --tw-prose-td-borders: rgba(38, 37, 30, 0.08);
+  --tw-prose-body: var(--color-text);
+  --tw-prose-headings: var(--color-text);
+  --tw-prose-lead: var(--color-text-2);
+  --tw-prose-links: var(--color-accent);
+  --tw-prose-bold: var(--color-text);
+  --tw-prose-counters: var(--color-text-2);
+  --tw-prose-bullets: var(--color-text-3);
+  --tw-prose-hr: var(--color-border);
+  --tw-prose-quotes: var(--color-text-2);
+  --tw-prose-quote-borders: var(--color-border-md);
+  --tw-prose-captions: var(--color-text-3);
+  --tw-prose-code: var(--color-crimson);
+  --tw-prose-pre-code: var(--color-code-text);
+  --tw-prose-pre-bg: var(--color-code-bg);
+  --tw-prose-th-borders: var(--color-border-md);
+  --tw-prose-td-borders: var(--color-border);
 
   /* dark mode (used when dark:prose-invert is applied) */
-  --tw-prose-invert-body: #f2f1ed;
-  --tw-prose-invert-headings: #f2f1ed;
-  --tw-prose-invert-lead: rgba(242, 241, 237, 0.6);
-  --tw-prose-invert-links: #f54e00;
-  --tw-prose-invert-bold: #f2f1ed;
-  --tw-prose-invert-counters: rgba(242, 241, 237, 0.5);
-  --tw-prose-invert-bullets: rgba(242, 241, 237, 0.28);
-  --tw-prose-invert-hr: rgba(242, 241, 237, 0.1);
-  --tw-prose-invert-quotes: rgba(242, 241, 237, 0.8);
-  --tw-prose-invert-quote-borders: rgba(242, 241, 237, 0.22);
-  --tw-prose-invert-captions: rgba(242, 241, 237, 0.5);
-  --tw-prose-invert-code: #fb7185;
-  --tw-prose-invert-pre-code: #f2f1ed;
-  --tw-prose-invert-pre-bg: #26251e;
-  --tw-prose-invert-th-borders: rgba(242, 241, 237, 0.2);
-  --tw-prose-invert-td-borders: rgba(242, 241, 237, 0.08);
+  --tw-prose-invert-body: var(--color-text);
+  --tw-prose-invert-headings: var(--color-text);
+  --tw-prose-invert-lead: var(--color-text-2);
+  --tw-prose-invert-links: var(--color-accent);
+  --tw-prose-invert-bold: var(--color-text);
+  --tw-prose-invert-counters: var(--color-text-2);
+  --tw-prose-invert-bullets: var(--color-text-3);
+  --tw-prose-invert-hr: var(--color-border);
+  --tw-prose-invert-quotes: var(--color-text-2);
+  --tw-prose-invert-quote-borders: var(--color-border-md);
+  --tw-prose-invert-captions: var(--color-text-3);
+  --tw-prose-invert-code: var(--color-code-inline);
+  --tw-prose-invert-pre-code: var(--color-code-text);
+  --tw-prose-invert-pre-bg: var(--color-code-bg);
+  --tw-prose-invert-th-borders: var(--color-border-md);
+  --tw-prose-invert-td-borders: var(--color-border);
 }
 
 /* Heading letter-spacing (Cursor-style compression) */
@@ -92,12 +104,12 @@
 
 /* Prose links */
 .prose a {
-  text-decoration-color: rgba(245, 78, 0, 0.35);
+  text-decoration-color: var(--color-accent-muted);
   text-underline-offset: 3px;
   transition: color 0.15s ease, text-decoration-color 0.15s ease;
 }
 .prose a:hover {
-  text-decoration-color: #f54e00;
+  text-decoration-color: var(--color-accent);
 }
 
 /* ── Blockquote ── */
@@ -107,31 +119,31 @@
 }
 
 .prose blockquote {
-  border-left: 3px solid rgba(38, 37, 30, 0.22);
-  background-color: #ebeae5;
+  border-left: 3px solid var(--color-border-md);
+  background-color: var(--color-bg-2);
   border-radius: 0 6px 6px 0;
   margin-top: 1.25rem;
   margin-bottom: 1.25rem;
   padding: 0.875rem 1.25rem;
   font-style: normal;
-  color: rgba(38, 37, 30, 0.72);
+  color: var(--color-text-2);
 }
 
 .dark .prose blockquote {
-  border-left-color: rgba(242, 241, 237, 0.22);
-  background-color: #26251e;
-  color: rgba(242, 241, 237, 0.72);
+  border-left-color: var(--color-border-md);
+  background-color: var(--color-bg-2);
+  color: var(--color-text-2);
 }
 
 /* ── Inline code ── */
 .prose :not(pre) > code {
-  background-color: #ebeae5;
-  color: #cf2d56;
+  background-color: var(--color-bg-2);
+  color: var(--color-crimson);
   padding: 0.1em 0.42em;
   border-radius: 4px;
   font-weight: 500;
   font-size: 0.875em;
-  border: 1px solid rgba(38, 37, 30, 0.08);
+  border: 1px solid var(--color-border);
 }
 
 .prose :not(pre) > code::before,
@@ -140,19 +152,19 @@
 }
 
 .dark .prose :not(pre) > code {
-  background-color: #26251e;
-  color: #fb7185;
-  border-color: rgba(242, 241, 237, 0.1);
+  background-color: var(--color-bg-2);
+  color: var(--color-code-inline);
+  border-color: var(--color-border);
 }
 
 /* ── Code blocks ── */
 .prose pre {
-  border: 1px solid rgba(38, 37, 30, 0.12);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
 }
 
 .dark .prose pre {
-  border-color: rgba(242, 241, 237, 0.1);
+  border-color: var(--color-border);
 }
 
 /* ── Scrollbar hide ── */
@@ -181,7 +193,7 @@
 
 .warm-tag:hover {
   color: var(--color-accent);
-  border-color: rgba(245, 78, 0, 0.3);
+  border-color: var(--color-accent-border);
 }
 
 /* ── Line numbers ── */
@@ -196,7 +208,7 @@ code[data-line-numbers] > [data-line]::before {
   width: 0.75rem;
   margin-right: 2rem;
   text-align: right;
-  color: rgba(242, 241, 237, 0.3);
+  color: var(--color-code-muted);
 }
 
 code[data-line-numbers-max-digits="2"] > [data-line]::before {

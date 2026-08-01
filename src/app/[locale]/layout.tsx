@@ -5,7 +5,7 @@ import { Analytics } from "@vercel/analytics/react"
 import { LocaleSwitch } from "@/components/locale-switch"
 import { ThemeToggle } from "@/components/mode-toggle"
 import { RssButton } from "@/components/rss-button"
-import { ThemeProvider } from "next-themes"
+import { ThemeProvider } from "@/components/theme-provider"
 import { Link } from "@/i18n/navigation"
 import { routing } from "@/i18n/routing"
 
