@@ -6,6 +6,7 @@
     "useIgnoreFile": false
   },
   "files": {
+    "includes": ["**", "!.contentlayer/**", "!.next/**"],
     "ignoreUnknown": false
   },
   "formatter": {

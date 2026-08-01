@@ -10,16 +10,16 @@ module.exports = {
     extend: {
       colors: {
         warm: {
-          50: "#f7f7f4",
-          100: "#f2f1ed",
-          200: "#ebeae5",
-          300: "#e6e5e0",
-          400: "#e1e0db",
-          900: "#26251e",
-          950: "#1a1914",
+          50: "#faf7f1",
+          100: "#f6f3ed",
+          200: "#e8e2d8",
+          300: "#dcd3c5",
+          400: "#c8bdad",
+          900: "#211e18",
+          950: "#15130f",
         },
-        accent: "#f54e00",
-        crimson: "#cf2d56",
+        accent: "#e64900",
+        crimson: "#b91f4b",
       },
       animation: {
         "fade-in": "fadeIn 0.4s ease-out",

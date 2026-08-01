@@ -49,7 +49,7 @@ export default async function PagePage({ params }: PageProps) {
           <article key={post._id} className="group py-7 first:pt-1">
             <Link href={`/${post.slugAsParams}`} className="block space-y-1.5">
               <h2
-                className="text-lg font-semibold leading-snug transition-colors duration-150 group-hover:text-[#f54e00]"
+                className="text-lg font-semibold leading-snug transition-colors duration-150 group-hover:text-[var(--color-accent)]"
                 style={{ letterSpacing: "-0.02em", color: "var(--color-text)" }}
               >
                 {post.title}

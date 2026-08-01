@@ -116,7 +116,7 @@ export function PostList({ posts, tags, locale }: PostListProps) {
                 {post.description && (
                   <p
                     className="text-sm leading-relaxed line-clamp-2"
-                    style={{ color: "var(--color-text-1)" }}
+                    style={{ color: "var(--color-text-2)" }}
                   >
                     {post.description}
                   </p>

@@ -52,7 +52,7 @@ export function LocaleSwitch({ currentLocale }: LocaleSwitchProps) {
                 style={{
                   color:
                     locale === currentLocale
-                      ? "var(--color-primary)"
+                      ? "var(--color-accent)"
                       : "var(--color-text-2)",
                 }}
               >
