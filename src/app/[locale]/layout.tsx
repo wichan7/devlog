@@ -2,8 +2,10 @@ import { notFound } from "next/navigation"
 import { hasLocale, NextIntlClientProvider } from "next-intl"
 import { getTranslations, setRequestLocale } from "next-intl/server"
 import { Analytics } from "@vercel/analytics/react"
+import { allPosts } from "contentlayer/generated"
 import { LocaleSwitch } from "@/components/locale-switch"
 import { ThemeToggle } from "@/components/mode-toggle"
+import { RandomPostButton } from "@/components/random-post-button"
 import { RssButton } from "@/components/rss-button"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Link } from "@/i18n/navigation"
@@ -27,6 +29,9 @@ export default async function LocaleLayout({
   const t = await getTranslations()
   const feedUrl =
     locale === routing.defaultLocale ? "/feed.xml" : `/${locale}/feed.xml`
+  const postUrls = allPosts
+    .filter((post) => post.locale === locale)
+    .map((post) => `/${post.slugAsParams}`)
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -48,6 +53,7 @@ export default async function LocaleLayout({
                   <div className="flex items-center gap-2">
                     <ThemeToggle />
                     <LocaleSwitch currentLocale={locale} />
+                    <RandomPostButton hrefs={postUrls} />
                     <RssButton href={feedUrl} />
                   </div>
 
