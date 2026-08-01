@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation"
 import { hasLocale, NextIntlClientProvider } from "next-intl"
 import { getTranslations, setRequestLocale } from "next-intl/server"
-import { Analytics } from "@/components/analytics"
+import { Analytics } from "@vercel/analytics/react"
 import { LocaleSwitch } from "@/components/locale-switch"
 import { ThemeToggle } from "@/components/mode-toggle"
 import { RssButton } from "@/components/rss-button"
-import { ThemeProvider } from "@/components/theme-provider"
+import { ThemeProvider } from "next-themes"
 import { Link } from "@/i18n/navigation"
 import { routing } from "@/i18n/routing"
 
