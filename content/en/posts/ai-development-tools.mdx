@@ -1,0 +1,207 @@
+---
+title: "Trying the Popular Ponytail and Caveman Skills"
+description: "What worked well and what fell short"
+date: 2026-08-01
+tags:
+  - AI
+  - Tools
+---
+
+## Overview
+
+I looked into development tools that make AI-assisted work easier, then used them in real tasks.
+
+**Test environment**
+
+* AI tool: Codex
+* Model: gpt-5.6-terra
+* Reasoning level: Medium
+
+# Ponytail
+
+![Ponytail banner](/images/ai-development-tools/ponytail.png)
+
+## Introduction
+
+> You know him. Long ponytail. Oval glasses. Has been at the company longer than the version control. You show him fifty lines; he looks at them, says nothing, and replaces them with one.
+>
+> Ponytail puts him inside your AI agent.
+
+Ponytail puts that veteran developer—the one who trims fifty lines down to one without a word—inside your AI agent.
+
+## How does it work?
+
+### Skill behavior
+
+```markdown
+1. Does this need to exist?   → no: skip it (YAGNI)
+2. Already in this codebase?  → reuse it, don't rewrite
+3. Stdlib does it?            → use it
+4. Native platform feature?   → use it
+5. Installed dependency?      → use it
+6. One line?                  → one line
+7. Only then: the minimum that works
+```
+
+When writing code, Ponytail encourages the AI to prioritize the existing codebase, standard library, platform features, and installed dependencies. It also pushes it to meet requirements with as little code as possible.
+
+### Intensity modes
+
+`/ponytail [lite | full | ultra | off]`
+
+## Test 1 (Full vs. Off)
+
+Prompt: `Build a ColorPicker component that changes color-accent, and add it to the top navigation.`
+
+![ColorPicker result in Full mode](/images/ai-development-tools/color-picker-full.png)
+
+### Full
+
+The result was a single native `<input type="color">` that updates `--color-accent`.
+
+```tsx
+<input
+  type="color"
+  defaultValue="#e64900"
+  aria-label="Choose accent color"
+  onChange={(event) =>
+    document.documentElement.style.setProperty("--color-accent", event.target.value)
+  }
+/>
+```
+
+![ColorPicker result in Off mode](/images/ai-development-tools/color-picker-off.png)
+
+### Off
+
+With Ponytail disabled, the implementation added a Headless UI popover, preset palette, localStorage persistence, custom-color selection, and alpha variants.
+
+![ColorPicker result in Lite mode](/images/ai-development-tools/color-picker-lite.png)
+
+### Result
+
+- Full: implemented only the requested color picker and CSS variable update.
+- Off: added a popover, predefined palette, localStorage, custom colors, and alpha colors.
+
+For a real work environment, I preferred Full: it did exactly what was requested.
+
+## Test 2 (Full vs. Lite)
+
+Prompt: `Add a button to the left of RSS in the top nav that goes to a random post.`
+
+### Full
+
+```tsx
+window.location.assign(hrefs[Math.floor(Math.random() * hrefs.length)])
+```
+
+### Lite
+
+```tsx
+import { useRouter } from "@/i18n/navigation"
+
+router.push(hrefs[Math.floor(Math.random() * hrefs.length)])
+```
+
+### Result
+
+- Full used `window.location.assign()` for navigation.
+- Lite used the project's `useRouter()`.
+
+In Next.js, `useRouter()` provides the better navigation behavior and matches this project's conventions. Full was effectively the wrong answer here; Lite wins.
+
+## Test 3 (Spring Framework, Lite vs. Off)
+
+Prompt: `Add file uploads to the project. Do not store files in the file system; keep them only in memory.`
+
+### Lite
+
+The implementation stored only bytes and a filename in a `ConcurrentHashMap`, and used Spring's standard `ResponseStatusException` for errors.
+
+### Off
+
+The implementation stored the content type too and used the project's existing `BizException` and `FileErrorCode` conventions.
+
+### Result
+
+- Lite saved the minimum information and used Spring's default exceptions.
+- Off also saved the content type and followed the project's existing exception design.
+
+Even without that context in the prompt, Off recognized that custom error codes should be used and produced a better fit for the project. Off wins.
+
+## Conclusion
+
+- For the ColorPicker, Full's requirements-only result was best.
+- For the routing button, Lite's implementation aligned best with Next.js.
+- For the file service, Off's understanding of the existing project structure was best.
+
+Ponytail produced worse results than I expected. The issue may be a lack of prompt specificity: because it follows instructions so literally, it often produced results close to a wrong answer in tests 2 and 3. A more detailed prompt could change that.
+
+## Audit / review
+
+Ponytail can also point out bloated code in the current project or commit.
+
+```sh
+/ponytail-audit   # audit the project source
+/ponytail-review  # review the latest commit
+```
+
+### Test output
+
+```text
+stdlib: Remove the unused MyBatis configuration and two dependencies; JPA is the only persistence layer in use.
+delete: Remove an uninjected, uncalled RestClient bean and the dedicated Apache HttpClient dependency.
+delete: Remove the empty UserCommandService; there is no replacement.
+yagni: Remove the ErrorCode interface with a single implementation; restore it only when another implementation is needed.
+net: about -45 lines and -3 direct dependencies.
+```
+
+# Caveman
+
+![Caveman banner](/images/ai-development-tools/caveman-banner.png)
+
+## Introduction
+
+> why use many token when few do trick
+> Make your AI coding agent talk like a caveman. Same answers, 65% fewer output tokens. Brain still big. Mouth small.
+
+Do we really need such long answers? Caveman makes an AI coding agent speak concisely, like a caveman. The result is the same, but output tokens drop by 65%: **same thinking, fewer words.**
+
+## How does it work?
+
+It does not interfere with reasoning. It changes only the final response so that it is short and caveman-like.
+
+- Fewer response tokens, with only the important points.
+
+## Test
+
+Prompt: `Tell me when I should choose denormalization while designing a database.`
+
+### Off
+
+The normal response explained read-heavy workloads, expensive joins and aggregations, strict latency requirements, snapshots of historical values, and reducing distributed-system dependencies. It also covered the need for a source of truth, an update strategy, acceptable staleness, reconciliation, and measurements before applying denormalization.
+
+### Full
+
+The Full answer condensed this into practical cases: dashboards, search APIs, large joins, history snapshots, distributed databases or caches, and expensive repeated calculations. It advised verifying measured read bottlenecks, update rules, inconsistency recovery, and alternatives such as indexes and caching.
+
+### Lite
+
+The Lite answer was shorter still: choose denormalization when read performance matters more than write cost; use it for frequent JOINs or aggregations, strict latency targets, repeated calculations, reporting, asynchronously updated data, and separate read/write models such as CQRS or materialized views. Keep the source normalized and treat duplicated fields as derived values.
+
+## Three months of use
+
+- Without it, long responses made it annoying to find the key point.
+- Full was so terse that it became hard to read.
+- Personally, Lite provides the most appropriate answer quality.
+
+## Aside
+
+A benchmark found that Caveman can actually increase token usage.
+
+[Does Caveman Actually Save Tokens? I Built a Benchmark to Find Out](https://medium.com/codandotv/does-caveman-actually-save-tokens-i-built-a-benchmark-to-find-out-469c8047c75d)
+
+- Enabling Caveman increases the initial context because the skill must be loaded.
+- In a short session, that initial overhead can remove almost all of the benefit.
+
+Token usage is not the important part—and may even increase. The real advantage is reducing the cognitive time needed to grasp the key points from a short answer.
