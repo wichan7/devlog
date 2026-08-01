@@ -1,0 +1,207 @@
+---
+title: "最近話題のPonytailとCavemanを使ってみた"
+description: "良かった点と気になった点のまとめ"
+date: 2026-08-01
+tags:
+  - AI
+  - Tools
+---
+
+## 概要
+
+AIを使って仕事を楽にするため、開発ツールを調べ、実際に使ってみた。
+
+**テスト環境**
+
+* AIツール: Codex
+* モデル: gpt-5.6-terra
+* Reasoning level: Medium
+
+# Ponytail
+
+![Ponytailバナー](/images/ai-development-tools/ponytail.png)
+
+## 紹介
+
+> You know him. Long ponytail. Oval glasses. Has been at the company longer than the version control. You show him fifty lines; he looks at them, says nothing, and replaces them with one.
+>
+> Ponytail puts him inside your AI agent.
+
+50行のコードを無言で1行にしてしまう、あのベテラン開発者をAIエージェントの中に入れるのがPonytailだ。
+
+## どう動くのか？
+
+### Skillの動作
+
+```markdown
+1. Does this need to exist?   → no: skip it (YAGNI)
+2. Already in this codebase?  → reuse it, don't rewrite
+3. Stdlib does it?            → use it
+4. Native platform feature?   → use it
+5. Installed dependency?      → use it
+6. One line?                  → one line
+7. Only then: the minimum that works
+```
+
+Ponytailは、AIがコードを書く際に既存のコードベース、標準ライブラリ、プラットフォーム機能、導入済みの依存関係を優先して活用するよう促す。また、できる限り少ないコードで要件を満たすようにする。
+
+### 強度調整モード
+
+`/ponytail [lite | full | ultra | off]`
+
+## テスト1（Full vs Off）
+
+Prompt: `color-accentを変更するColorPickerコンポーネントを作り、上部のナビゲーションに追加して。`
+
+![FullモードのColorPicker結果](/images/ai-development-tools/color-picker-full.png)
+
+### Full
+
+結果は、`--color-accent`を更新するシンプルなネイティブの`<input type="color">`だった。
+
+```tsx
+<input
+  type="color"
+  defaultValue="#e64900"
+  aria-label="Choose accent color"
+  onChange={(event) =>
+    document.documentElement.style.setProperty("--color-accent", event.target.value)
+  }
+/>
+```
+
+![OffモードのColorPicker結果](/images/ai-development-tools/color-picker-off.png)
+
+### Off
+
+Ponytailを無効にすると、Headless UIのPopover、定義済みパレット、localStorageへの保存、カスタムカラーの選択、alpha値のカラーまで追加された。
+
+![LiteモードのColorPicker結果](/images/ai-development-tools/color-picker-lite.png)
+
+### 結果分析
+
+- Full: カラーピッカーとCSS変数の変更という要件だけを実装。
+- Off: Popover、定義済みパレット、localStorage、カスタムカラー、alphaカラーまで実装。
+
+実務環境だと考えると、依頼されたことだけを行うFullのほうが好みに合った。
+
+## テスト2（Full vs Lite）
+
+Prompt: `上部navのRSSの左側に、ランダムな記事へ移動するボタンを1つ作って。`
+
+### Full
+
+```tsx
+window.location.assign(hrefs[Math.floor(Math.random() * hrefs.length)])
+```
+
+### Lite
+
+```tsx
+import { useRouter } from "@/i18n/navigation"
+
+router.push(hrefs[Math.floor(Math.random() * hrefs.length)])
+```
+
+### 結果分析
+
+- Full: ページ遷移に`window.location.assign()`を使用。
+- Lite: プロジェクトの`useRouter()`を使用。
+
+Next.jsでは`useRouter()`を使うほうが適切で、このプロジェクトの規約にも合う。ここではFullは実質的に不正解で、Liteの勝ち。
+
+## テスト3（Spring Framework、Lite vs Off）
+
+Prompt: `プロジェクトにファイルアップロード機能を追加して。ファイルシステムには保存せず、メモリ上だけに置く。`
+
+### Lite
+
+`ConcurrentHashMap`にバイト列とファイル名だけを保存し、エラーにはSpring標準の`ResponseStatusException`を使った。
+
+### Off
+
+Content-Typeも保存し、既存プロジェクトの`BizException`と`FileErrorCode`の規約を使った。
+
+### 結果分析
+
+- Lite: 最小限の情報だけを保存し、Spring標準の例外を使用。
+- Off: Content-Typeも保存し、既存プロジェクトの例外設計に従う。
+
+そのコンテキストをPromptに含めなくても、Offはカスタムエラーコードが必要だと判断し、プロジェクトにより適した実装になった。Offの勝ち。
+
+## 結論
+
+- ColorPickerでは、要件だけを実装したFullの結果がよかった。
+- ルーティングボタンでは、Next.jsの考え方に沿ったLiteの実装がよかった。
+- Fileサービスでは、既存プロジェクトの構造を理解したOffの実装がよかった。
+
+Ponytailは思ったより良くない結果を出した。Promptの具体性が足りない影響かもしれない。指示どおりにしか開発しないため、テスト2と3では不正解に近い結果を出すことが多かった。Promptをもっと具体化すれば結果は変わる可能性がある。
+
+## audit / review
+
+Ponytailは現在のプロジェクトやコミット内の膨らんだコードも指摘してくれる。
+
+```sh
+/ponytail-audit   # プロジェクトのソースをaudit
+/ponytail-review  # 最後のコミットをreview
+```
+
+### テスト出力
+
+```text
+stdlib: 未使用のMyBatis設定と依存関係2つを削除。永続化層はJPAだけを使用。
+delete: 注入・呼び出しされないRestClient Beanと専用Apache HttpClient依存関係を削除。
+delete: 空のUserCommandServiceを削除。代替は不要。
+yagni: 実装が1つだけのErrorCodeインターフェースを削除。別の実装が必要になった時だけ戻す。
+net: 約45行、直接依存関係3つを削減可能。
+```
+
+# Caveman
+
+![Cavemanバナー](/images/ai-development-tools/caveman-banner.png)
+
+## 紹介
+
+> why use many token when few do trick
+> Make your AI coding agent talk like a caveman. Same answers, 65% fewer output tokens. Brain still big. Mouth small.
+
+わざわざ長々と話す必要があるだろうか。CavemanはAIコーディングエージェントを原始人のように簡潔に話させる。結果は同じでも、出力トークンは65%減る。**考え方はそのまま、言葉だけ短く。**
+
+## どう動く？
+
+推論には介入せず、最終回答だけに介入して短く原始人的に話させる。
+
+- 回答トークンの使用量を減らし、要点だけを伝える。
+
+## テスト
+
+Prompt: `DB設計で非正規化を選ぶべきケースを教えて。`
+
+### Off
+
+通常の回答は、読み取り中心のワークロード、高コストなJOIN・集計、厳しいレイテンシ要件、過去の値のスナップショット、分散システム依存の削減を説明した。また、source of truth、更新戦略、許容できる遅延、不整合の再処理、適用前の計測も扱っていた。
+
+### Full
+
+Fullはこれを、ダッシュボード、検索API、大規模JOIN、履歴スナップショット、分散DB・キャッシュ、繰り返しコストの高い計算という実用的なケースに圧縮した。計測済みの読み取りボトルネック、更新ルール、不整合からの復旧、インデックスやキャッシュなどの代替案を確認するよう助言している。
+
+### Lite
+
+Liteはさらに短い。書き込みコストより読み取り性能が重要なときに非正規化を選ぶ。頻繁なJOIN・集計、厳しいレイテンシ目標、繰り返し計算、レポーティング、非同期更新できるデータ、CQRSやmaterialized viewのような読み書きモデル分離が対象だ。元データは正規化したまま保ち、重複フィールドは派生値として扱う。
+
+## 3か月使った感想
+
+- 使わないと出力が長すぎて、要点把握にイライラした。
+- Fullは短すぎて文章が読みにくい。
+- 個人的にはLiteの回答品質がちょうどよい。
+
+## 余談
+
+Cavemanは、実測ではむしろトークン使用量が増えるというベンチマークもある。
+
+[Does Caveman Actually Save Tokens? I Built a Benchmark to Find Out](https://medium.com/codandotv/does-caveman-actually-save-tokens-i-built-a-benchmark-to-find-out-469c8047c75d)
+
+- Cavemanを有効にした瞬間から、Skillのロードによって初期Contextが増える。
+- 短いセッションでは初期オーバーヘッドが大きく、Cavemanを使う利点がほとんどなくなる場合がある。
+
+トークン使用量は大きな意味を持たず、むしろ増えることさえある。短い回答によって要点把握にかかる認知時間を減らせることが利点だろう。
