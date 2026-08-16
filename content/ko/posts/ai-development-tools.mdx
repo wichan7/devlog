@@ -1,6 +1,6 @@
 ---
-title: "요새 핫한 Ponytail과 Caveman 사용 후기"
-description: "괜찮은 점, 아쉬운 점 정리해보았음"
+title: "Ponytail, Caveman 후기"
+description: "요새 유행하는 Ponytail, Caveman 3달 사용 후기"
 date: 2026-08-01
 tags:
   - AI
@@ -8,8 +8,12 @@ tags:
 ---
 
 ## 개요
+회사에서 보면 AI 잘 활용하는 사람들은 맨날 토큰 사용량 피크치고, 부족해서 개인 구독까지 해서 쓰더라.  
+나도 이 업계 흐름에 따라가고자, 일할 때에는 최대한 AI를 많이 써보려고 노력은 하는 중이다.  
 
-AI를 활용해 일 편하게 하고자, 개발 도구들을 조사하고 실제로 사용해보았음.
+뭘 알아야 잘 쓰겠다 싶어서, 트렌드를 찾아보는데 Ponytail과 Caveman이라는 플러그인이 핫하다고 하더라.  
+AI를 어떻게 정량적으로 평가할지는 잘 모르겠고.. 그냥 내가 느낀 점을 주관적으로 정리해보았다.
+
 
 **테스트 환경**
 * AI Tool: Codex
@@ -21,14 +25,16 @@ AI를 활용해 일 편하게 하고자, 개발 도구들을 조사하고 실제
 ![Ponytail 배너](/images/ai-development-tools/ponytail.png)
 
 ## 소개
+AI를 쓰다보면 지시한적 없는 기능이나, 해당 스콥에서는 의미 없는 방어 코드를 막 만들어주곤 한다.
+
+나는 커밋하기 직전에 이런 부분들을 직접 체크하곤 하는데, 그 과정에 시간이 꽤 들어가곤 한다.
+
+이걸 해결하기 위해 나온 플러그인이 Ponytail이다.
 
 > You know him. Long ponytail. Oval glasses. Has been at the company longer than the version control. You show him fifty lines; he looks at them, says nothing, and replaces them with one.
 >
 > Ponytail puts him inside your AI agent.
 
->그 사람 알지.
-> 긴 포니테일에 타원형 안경을 쓴 사람. 버전 관리 시스템보다도 오래 회사에 있었던 베테랑. 네가 50줄짜리 코드를 보여주면, 그는 아무 말 없이 훑어본 뒤 그걸 단 한 줄로 바꿔버린다.
-> **Ponytail은 그런 베테랑 개발자를 네 AI 에이전트 안에 넣어준다.**
 
 ## 어떻게 동작하는가?
 
@@ -44,14 +50,24 @@ AI를 활용해 일 편하게 하고자, 개발 도구들을 조사하고 실제
 7. Only then: the minimum that works
 ```
 
-Ponytail은 AI가 코드를 작성할 때, 기존 코드베이스와 표준 라이브러리, 플랫폼 기능, 설치된 의존성을 우선적으로 활용하도록 유도함. 또한, 가능한 한 최소한의 코드로 요구사항을 충족시키도록 함.
+Ponytail은 AI가 코드를 작성할 때, 소스를 짧게 짤 수 있도록 여러 단계를 검증한다.
 
+1. 필요한 기능인가?
+2. 이미 코드 베이스에 있는 기능인가?
+3. 표준 라이브러리가 있는가?
+4. 플랫폼 기능 (HTML, AOS 등)에 이미 있는 기능인가?
+5. 이미 설치된 의존성으로 쓸 수 있는가?
+6. 한 줄의 소스로 가능한가?
+7. 그 외에는 최소한의 코드로 구현
+
+위 단계를 거치고 나면, 쓸데없는 코드 생성이 없어진다.
 
 ### 강도 조절 모드
 
 /ponytail **[lite | full | ultra | off]**
 
 ## 테스트1 (Full vs Off)
+내 블로그 헤더에 직접 기능을 추가시키도록 지시하였다. 지시 프롬프트는 아래와 같다.
 
 Prompt: `color-accent 조정하는 ColorPicker 컴포넌트 만들고 상단 Nav에 추가해줘`
 
@@ -196,11 +212,14 @@ export function ColorPicker() {
 ### 결과 분석
 
 - Full
-    - 컬러 피커 & CSS 변수 변경한다는 요구사항만 구현
+    - 컬러 피커 & CSS 변수 변경한다는 요구사항만 구현했다.
 - Off
-    - Popover, 미리 정의된 색상 팔레트, LocalStorage 저장, 커스텀 색상 선택, Alpha 색상 등 추가 기능을 구현
+    - Popover, 미리 정의된 색상 팔레트, LocalStorage 저장, 커스텀 색상 선택, Alpha 색상 등 추가 기능을 구현했다.
 
-⇒ 실무 환경이었다고 생각하면, ‘요구 사항만 구현’한 Full이 입맛에 맞았음
+⇒ 실무에서는 기획 문서대로 개발해야 하니, AI의 상상이 가미되어서는 안된다. 
+따라서 ‘요구 사항만 구현’한 Full이 입맛에 맞았다.
+
+
 
 ## 테스트2 (Full vs Lite)
 
@@ -274,13 +293,15 @@ export function RandomButton({ hrefs }: { hrefs: string[] }) {
 ### 결과 분석
 
 - Full
-    - 페이지 이동에 window.location.assign() 사용
+    - 페이지 이동에 window.location.assign() 사용했다
 - Lite
-    - 페이지 이동에 useRouter() 사용
+    - 페이지 이동에 useRouter() 사용했다
 
-⇒ Next에서는 useRouter()를 사용해야 성능 좋음. 프로젝트 컨벤션도 useRouter()
+⇒ 이게 재미있는 결과였는데, Next에서는 useRouter()를 사용해야 필요 없는 부분까지 재렌더링되지 않는다.  
+실제 프로젝트 컨벤션도 useRouter() 이었다.
 
-Full은 사실상 오답으로 보임 Lite 승
+따라서 이 부분만 보면 Lite의 승이다.
+
 
 ## 테스트3 (Spring Framework, Lite vs Off)
 
@@ -387,29 +408,30 @@ public class InMemoryFileStorageService {
 
 ### 결과 분석
 - Lite
-    - 최소한의 정보만 저장 & Spring 기본 예외(`ResponseStatusException`) 사용
+    - 최소한의 정보만 저장 & Spring 기본 예외(`ResponseStatusException`) 사용한다.
 - Off
-    - Content-Type도 함께 저장 & 기존 프로젝트 Exception 활용
+    - Content-Type도 함께 저장 & 기존 프로젝트 Exception 활용한다.
 
-⇒ Off는 컨텍스트에 포함하지 않아도, 커스텀 ErrorCode를 구현해야 한다는 것을 감지하여 프로젝트에 Fit 하게 구현함.
+⇒ Off는 컨텍스트에 포함하지 않아도, 커스텀 ErrorCode를 구현해야 한다는 것을 감지하여 프로젝트에 Fit 하게 구현했으므로 Off가 잘 구현했다.
 
-Off 승
 
 ## 결론
 
-- ColorPicker 구현, Full vs Off 에서는 요구사항만 구현한 결과가 만족 (Full)
-- 라우팅 버튼 구현, next의 컨셉을 잘 따르는 구현이 만족 (Lite)
-- File 서비스 구현, 기존 프로젝트 구조를 이해한 Off 구현이 맘에 들었음 (Off)
+- (1) ColorPicker 구현에서는, Full vs Off 에서는 요구사항만 구현한 결과가 만족 (Full)
+- (2) 라우팅 버튼 구현에서는, next의 컨셉을 잘 따르는 구현이 만족 (Lite)
+- (3) File 서비스 구현에서는, 기존 프로젝트 구조를 이해한 Off 구현이 만족 (Off)
 
-Ponytail이 생각보다 안좋은 결과를 냈음.
+Ponytail이 생각보다 안좋은 결과를 냈다.
 
-프롬프트의 구체성 부족의 영향일 것 같은데.. 딱 시킨대로만 개발하기 때문에, 오답에 가까운 결과물을 내놓은 경우가 많았음 (2, 3)
+프롬프트의 구체성 부족의 영향일 것 같은데.. 딱 시킨대로만 개발하기 때문에, 오답에 가까운 결과물을 내놓은 경우가 있었던 것 같다. (2, 3)
 
-Prompt를 더 구체화하면 결과가 달라질 가능성은 있다고 생각됨.
+하네스나 Claude.md 등으로 Prompt를 더 구체화하면 유용하게 사용할 수 있지 않을까 생각된다.  
 
-## audit / review
+Ponytail을 잘 쓰기 위해서는 프롬프트를 더 구체화하는 것이 필요할 것 같다.  
 
-Ponytail이 현재 프로젝트 / 커밋의 부풀려진 코드를 지적해줌
+## (추가 기능) audit / review
+
+Ponytail이 현재 프로젝트 / 커밋의 부풀려진 코드를 지적해준다.
 
 ```sh
 /ponytail-audit   -- 프로젝트 소스 audit
@@ -437,30 +459,27 @@ yagni: 구현체가 하나인 ErrorCode 인터페이스 제거하고 ErrorCodeIm
 net: 약 -45줄, 직접 의존성 -3개 가능.
 ```
 
+나는 요새 `/ponytail-review`를 통해, 커밋 직전에 불필요한 코드가 들어가지 않았는지 검증하는 용도로만 사용하고 있다.
+
 # Caveman
 
 ![Caveman 배너](/images/ai-development-tools/caveman-banner.png)
 
 ## 소개
+Caveman은 AI가 답변할 때, 짧게, 원시인처럼 말하게 하는 플러그인이다.  
+
 
 > why use many token when few do trick 
 > Make your AI coding agent talk like a caveman. Same answers, 65% fewer output tokens. Brain still big. Mouth small.
 
-> 굳이 장황하게 말할 필요가 있을까?
-> 
-> AI 코딩 에이전트를 원시인처럼 간결하게 말하도록 만들어라.
-> 결과는 그대로지만 출력 토큰은 65% 줄어든다. **생각은 그대로, 말만 짧게.**
-
-
-
-
-
 
 ## 어떻게 동작?
 
-추론에는 개입하지 않고 최종 답변에 개입하여, 짧게, 원시인처럼 말하게 함.
+추론에는 개입하지 않고 최종 답변에 개입하여, 짧게, 원시인처럼 말하게 한다.
 
-- 답변 토큰 사용량을 줄임 & 핵심만 말함
+레포에서 말하는 기대 효과는 두가지이다.
+1. 답변에서 사용하는 토큰 사용량을 줄인다.  
+2. 핵심 내용만 생성하므로 사람이 글을 파악하는데 걸리는 시간을 줄일 수 있다.  
 
 ## 테스트
 
@@ -544,19 +563,17 @@ Prompt: `DB 설계중 반정규화를 선택해야 하는 경우를 알려줘`
 
 ## 3달 사용 후기
 
-- 안 썼을 땐, 출력이 너무 길어서 핵심 파악하는데 짜증이 났음
-- Full은 너무 단답형이라 글이 잘 안읽힘
-- 개인적으로 Lite 답변 퀄리티가 적절해 보임
+- 안 썼을 땐, 출력이 너무 길어서 핵심 파악하는데 짜증이 났었다.
+- Full은 너무 단답형이라, 새로 알게되는 개념에 대해서는 글이 잘 안읽히는 경우가 있었다.
+- 개인적으로 Lite 답변 퀄리티가 적절해 보여, 이거 사용중이다.
 
 ## 사족
 
-Caveman 실측 시, 오히려 토큰 사용량이 늘어난다는 벤치마크가 있음.
+Caveman 실측 시, 오히려 토큰 사용량이 늘어난다는 벤치마크가 있다.
 
 [Does Caveman Actually Save Tokens? I Built a Benchmark to Find Out](https://medium.com/codandotv/does-caveman-actually-save-tokens-i-built-a-benchmark-to-find-out-469c8047c75d)
 
-- Caveman 자체를 활성화하는 순간부터 초기 Context가 증가 (스킬 로드)
+- 스킬 로드로 인해, Caveman 자체를 활성화하는 순간부터 초기 Context가 증가한다.
 - 짧은 세션에서는 초기 오버헤드가 커서 Caveman을 쓰는 이득이 거의 없을 수 있다
 
-토큰 사용량은 큰 의미 없고 (오히려 늘 수 있음) 
-
-짧은 답변을 통해, 핵심 파악에 걸리는 인지 시간 절감을 장점으로 보면 되겠다.
+요약하면, 토큰 사용량은 큰 의미 없고 (오히려 늘 수 있음) 짧은 답변을 통해, 핵심 파악에 걸리는 인지 시간 절감을 장점으로 보면 되겠다.
