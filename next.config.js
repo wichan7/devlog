@@ -1,19 +1,17 @@
-const { withContentlayer } = require("next-contentlayer2")
 const createNextIntlPlugin = require('next-intl/plugin')
 
 const withNextIntl = createNextIntlPlugin();
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  webpack(config) {
-    config.module.rules.push({
-      test: /\.svg$/,
-      issuer: /\.[jt]sx?$/,
-      use: ['@svgr/webpack'],
-    });
-
-    return config;
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
+      },
+    },
   },
 }
 
-module.exports = withNextIntl(withContentlayer(nextConfig))
+module.exports = withNextIntl(nextConfig)

@@ -1,0 +1,59 @@
+---
+title: Thymeleafのソース変更を自動でリロードする
+description: spring-devtoolsを設定して、より快適に開発しよう
+date: 2023-08-16
+tags:
+  - Web
+  - Spring
+---
+
+## 概要
+
+Spring BootでCRUDを実装しているときに、Thymeleafのコード（.html）を修正してもすぐに反映されず、再起動してから変更が反映されることがありました。  
+なぜ変更がすぐに反映されないのでしょうか？
+
+## 理由
+
+Thymeleafはパフォーマンス向上のため、レンダリングしたページをキャッシュしています。  
+また、テンプレートを変更しても再読み込みされないため、修正内容がすぐには反映されません。
+
+## どうすればよい？
+
+開発時には、Thymeleafのキャッシュオプションを無効にすればよいです。  
+`application.yml`に次のプロパティを追加します。  
+
+```yaml showLineNumbers
+spring:
+  thymeleaf:
+    cache: false
+```
+
+## DevToolsの紹介
+
+せっかくなので、Javaのソース変更も検知して自動で再ビルドされるようにしましょう。  
+Spring Bootは、`devtools`という便利なライブラリを提供しています。
+
+## DevToolsのインストール
+
+### Gradleの依存関係を追加
+
+```gradle showLineNumbers
+dependencies {
+  compileOnly 'org.springframework.boot:spring-boot-devtools'
+}
+```
+
+### application.ymlを修正
+
+```yaml showLineNumbers
+spring:
+  devtools:
+    livereload:
+      enabled: true
+    restart:
+      enabled: true
+```
+
+## Eclipseの設定変更
+
+Eclipse上部のツールバーで`Project > Build Automatically`を有効にします。

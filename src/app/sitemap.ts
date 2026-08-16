@@ -1,6 +1,6 @@
-import { allPosts } from "contentlayer/generated"
 import type { MetadataRoute } from "next"
 import i18nConfig from "@/i18n/constant.json"
+import { allPosts } from "@/lib/content"
 
 const SITE_URL = process.env.SITE_URL || "https://blog.wichan.dev"
 const locales = i18nConfig.locales

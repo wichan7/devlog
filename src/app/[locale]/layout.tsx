@@ -1,5 +1,4 @@
 import { Analytics } from "@vercel/analytics/react"
-import { allPosts } from "contentlayer/generated"
 import { notFound } from "next/navigation"
 import { hasLocale, NextIntlClientProvider } from "next-intl"
 import { getTranslations, setRequestLocale } from "next-intl/server"
@@ -10,6 +9,7 @@ import { RssButton } from "@/components/rss-button"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Link } from "@/i18n/navigation"
 import { routing } from "@/i18n/routing"
+import { allPosts } from "@/lib/content"
 
 interface LocaleLayoutProps {
   children: React.ReactNode

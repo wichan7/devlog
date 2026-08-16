@@ -1,9 +1,9 @@
-import { allPosts } from "contentlayer/generated"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import Giscus from "@/components/giscus"
 import { Mdx } from "@/components/mdx-components"
 import { Link } from "@/i18n/navigation"
+import { allPosts } from "@/lib/content"
 import { formatDate } from "@/lib/format-date"
 
 interface RouteParams {
@@ -95,7 +95,7 @@ export default async function PostPage(props: PostProps) {
 
       {/* Article body */}
       <div className="prose max-w-none dark:prose-invert">
-        <Mdx code={post.body.code} />
+        <Mdx source={post.body.raw} />
       </div>
 
       {/* Tags */}

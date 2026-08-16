@@ -1,5 +1,5 @@
-import { allPosts } from "contentlayer/generated"
 import RSS from "rss"
+import { allPosts } from "@/lib/content"
 
 const SITE_URL = process.env.SITE_URL ?? "https://blog.wichan.dev"
 
