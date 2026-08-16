@@ -6,14 +6,16 @@ import { Mdx } from "@/components/mdx-components"
 import { Link } from "@/i18n/navigation"
 import { formatDate } from "@/lib/format-date"
 
-interface PostProps {
-  params: {
-    slug: string[]
-    locale: string
-  }
+interface RouteParams {
+  slug: string[]
+  locale: string
 }
 
-async function getPostFromParams(params: PostProps["params"]) {
+interface PostProps {
+  params: Promise<RouteParams>
+}
+
+async function getPostFromParams(params: RouteParams) {
   const slug = params?.slug?.join("/")
   const currentLocale = params?.locale
 
@@ -26,9 +28,8 @@ async function getPostFromParams(params: PostProps["params"]) {
 
 const SITE_URL = process.env.SITE_URL || "https://blog.wichan.dev"
 
-export async function generateMetadata({
-  params,
-}: PostProps): Promise<Metadata> {
+export async function generateMetadata(props: PostProps): Promise<Metadata> {
+  const params = await props.params
   const post = await getPostFromParams(params)
 
   if (!post) {
@@ -51,14 +52,15 @@ export async function generateMetadata({
   }
 }
 
-export async function generateStaticParams(): Promise<PostProps["params"][]> {
+export async function generateStaticParams(): Promise<RouteParams[]> {
   return allPosts.map((post) => ({
     slug: post.slugAsParams.split("/"),
     locale: post.locale,
   }))
 }
 
-export default async function PostPage({ params }: PostProps) {
+export default async function PostPage(props: PostProps) {
+  const params = await props.params
   const post = await getPostFromParams(params)
 
   if (!post) {

@@ -4,21 +4,21 @@ import { Link } from "@/i18n/navigation"
 import { formatDate } from "@/lib/format-date"
 
 interface PageProps {
-  params: {
+  params: Promise<{
     slug: string[]
     locale: string
-  }
+  }>
 }
 
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
+export async function generateMetadata(props: PageProps): Promise<Metadata> {
+  const params = await props.params
   return {
     title: params.slug[0],
   }
 }
 
-export default async function PagePage({ params }: PageProps) {
+export default async function PagePage(props: PageProps) {
+  const params = await props.params
   const tagName = params.slug[0]
   const locale = params.locale
 

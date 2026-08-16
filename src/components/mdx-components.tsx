@@ -1,13 +1,14 @@
 import Image from "next/image"
-import { useMDXComponent } from "next-contentlayer/hooks"
+import { useMDXComponent } from "next-contentlayer2/hooks"
 import { Link } from "@/i18n/navigation"
 
 function MdxLink({
   href,
+  popover,
   ...props
 }: React.AnchorHTMLAttributes<HTMLAnchorElement>) {
   if (!href || !href.startsWith("/")) {
-    return <a href={href} {...props} />
+    return <a href={href} popover={popover} {...props} />
   }
   return <Link href={href as Parameters<typeof Link>[0]["href"]} {...props} />
 }

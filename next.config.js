@@ -1,4 +1,4 @@
-const { withContentlayer } = require("next-contentlayer")
+const { withContentlayer } = require("next-contentlayer2")
 const createNextIntlPlugin = require('next-intl/plugin')
 
 const withNextIntl = createNextIntlPlugin();

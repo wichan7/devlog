@@ -4,16 +4,15 @@ import { getTranslations } from "next-intl/server"
 import { PostList } from "@/components/post-list"
 
 interface HomeProps {
-  params: {
+  params: Promise<{
     locale: string
-  }
+  }>
 }
 
 const SITE_URL = process.env.SITE_URL || "https://blog.wichan.dev"
 
-export async function generateMetadata({
-  params,
-}: HomeProps): Promise<Metadata> {
+export async function generateMetadata(props: HomeProps): Promise<Metadata> {
+  const params = await props.params
   const { locale } = params
   const t = await getTranslations()
 
@@ -31,21 +30,24 @@ export async function generateMetadata({
   }
 }
 
-export default function Home({ params }: HomeProps) {
+export default async function Home(props: HomeProps) {
+  const params = await props.params
   const { locale } = params
 
   const posts = allPosts
     .filter((post) => post.locale === locale)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .map(({ _id, title, description, date, tags, slugAsParams, thumbnail }) => ({
-      _id,
-      title,
-      description,
-      date,
-      tags,
-      slugAsParams,
-      thumbnail,
-    }))
+    .map(
+      ({ _id, title, description, date, tags, slugAsParams, thumbnail }) => ({
+        _id,
+        title,
+        description,
+        date,
+        tags,
+        slugAsParams,
+        thumbnail,
+      }),
+    )
 
   const tagMap = posts
     .flatMap((post) => post.tags)
