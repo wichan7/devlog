@@ -1,8 +1,7 @@
-import { allPages } from "contentlayer/generated"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-
 import { Mdx } from "@/components/mdx-components"
+import { allPages } from "@/lib/content"
 
 interface RouteParams {
   slug: string[]
@@ -87,7 +86,7 @@ export default async function PagePage(props: PageProps) {
         )}
       </header>
       <div className="prose max-w-none dark:prose-invert">
-        <Mdx code={page.body.code} />
+        <Mdx source={page.body.raw} />
       </div>
     </article>
   )

@@ -1,5 +1,7 @@
 import Image from "next/image"
-import { useMDXComponent } from "next-contentlayer2/hooks"
+import { MDXRemote } from "next-mdx-remote/rsc"
+import rehypePrettyCode from "rehype-pretty-code"
+import remarkGfm from "remark-gfm"
 import { Link } from "@/i18n/navigation"
 
 function MdxLink({
@@ -19,11 +21,18 @@ const components = {
 }
 
 interface MdxProps {
-  code: string
+  source: string
 }
 
-export function Mdx({ code }: MdxProps) {
-  const Component = useMDXComponent(code)
-
-  return <Component components={components} />
+export async function Mdx({ source }: MdxProps): Promise<React.ReactNode> {
+  return await MDXRemote({
+    source,
+    components,
+    options: {
+      mdxOptions: {
+        remarkPlugins: [remarkGfm],
+        rehypePlugins: [[rehypePrettyCode, { theme: "dark-plus" }]],
+      },
+    },
+  })
 }

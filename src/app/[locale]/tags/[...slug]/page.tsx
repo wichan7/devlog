@@ -1,6 +1,6 @@
-import { allPosts } from "contentlayer/generated"
 import type { Metadata } from "next"
 import { Link } from "@/i18n/navigation"
+import { allPosts } from "@/lib/content"
 import { formatDate } from "@/lib/format-date"
 
 interface PageProps {
