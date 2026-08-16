@@ -4,14 +4,16 @@ import { notFound } from "next/navigation"
 
 import { Mdx } from "@/components/mdx-components"
 
-interface PageProps {
-  params: {
-    slug: string[]
-    locale: string
-  }
+interface RouteParams {
+  slug: string[]
+  locale: string
 }
 
-async function getPageFromParams(params: PageProps["params"]) {
+interface PageProps {
+  params: Promise<RouteParams>
+}
+
+async function getPageFromParams(params: RouteParams) {
   const slug = params?.slug?.join("/")
   const currentLocale = params?.locale
 
@@ -24,9 +26,8 @@ async function getPageFromParams(params: PageProps["params"]) {
 
 const SITE_URL = process.env.SITE_URL || "https://blog.wichan.dev"
 
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
+export async function generateMetadata(props: PageProps): Promise<Metadata> {
+  const params = await props.params
   const page = await getPageFromParams(params)
 
   if (!page) {
@@ -49,14 +50,15 @@ export async function generateMetadata({
   }
 }
 
-export async function generateStaticParams(): Promise<PageProps["params"][]> {
+export async function generateStaticParams(): Promise<RouteParams[]> {
   return allPages.map((page) => ({
     slug: page.slugAsParams.split("/"),
     locale: page.locale,
   }))
 }
 
-export default async function PagePage({ params }: PageProps) {
+export default async function PagePage(props: PageProps) {
+  const params = await props.params
   const page = await getPageFromParams(params)
 
   if (!page) {
@@ -65,7 +67,10 @@ export default async function PagePage({ params }: PageProps) {
 
   return (
     <article className="py-4">
-      <header className="mb-8 pb-6" style={{ borderBottom: "1px solid var(--color-border)" }}>
+      <header
+        className="mb-8 pb-6"
+        style={{ borderBottom: "1px solid var(--color-border)" }}
+      >
         <h1
           className="text-3xl sm:text-4xl font-bold leading-tight mb-2"
           style={{ letterSpacing: "-0.03em", color: "var(--color-text)" }}
@@ -73,7 +78,10 @@ export default async function PagePage({ params }: PageProps) {
           {page.title}
         </h1>
         {page.description && (
-          <p className="text-base leading-relaxed" style={{ color: "var(--color-text-2)" }}>
+          <p
+            className="text-base leading-relaxed"
+            style={{ color: "var(--color-text-2)" }}
+          >
             {page.description}
           </p>
         )}
