@@ -1,0 +1,184 @@
+---
+title: 동시성 문제와 솔루션
+description: 
+date: 2026-09-05
+tags:
+  - Backend
+---
+동시성 문제는 참 골치 아프다.
+
+나는 3년간 앱테크 서비스를 MSA 환경에서 개발 및 운영해왔고, 부끄럽지만 '포인트 사용해서 쿠폰 발급' 처럼 정합성이 중요한 비즈니스에서 동시성 문제가 발생했던 적이 있다.
+
+열심히 글을 작성하는 목적은 '다음 개발 땐 잘하자' 하는 스스로의 리마인드와, 글을 보러 와준 당신께 얻어가는 것이 있었으면 하는 마음에 있다.
+
+## 문제의 정의
+
+동시성 문제라고 하면 `여러 스레드/트랜잭션이 동시에 같은 데이터에 접근`하여 값을 수정할 때, 예상치 못한 결과가 나오는 현상을 말한다.
+
+짧은 예로, 성시경 콘서트가 불티나게 잘 팔려서 마지막 1좌석만 남았다고 가정해보자.
+그 한 자리를 두고, 100명의 사람이 정말 동시에 예매 버튼을 눌렀다면? 100개의 예매 요청이 서버에 정말 동시에 도달했다면?
+
+100명을 한 자리에 앉히고 싶지 않다면, 개발자인 당신은 이 문제를 현명하게 해결해야 할 것이다.
+
+## 해결 방법 소개
+
+해결 방법은 크게 보면 세가지가 있겠다.
+
+### 첫째. 사후 처리하는 방법
+
+다음 날 출근해서 데이터를 확인하고, 99명의 사람들에게 미안하다고 문자를 돌리면 된다.  
+하지만 성시경 콘서트 티켓팅처럼 중요한 서비스에서는 사람들이 많이 뿔낼테니, 나는 곧 무직백수가 될 것이다. 따라서 비즈니스 중요도에 따라 해결 방법이 될수도 안될수도 있다.
+
+### 둘째. 완료 전에 충돌을 확인하는 방법
+
+seat 테이블에 `seat_version int` 필드를 둔다.
+모든 요청은 먼저, 예약하고자 하는 seat의 seat_version을 읽는다.  
+각 요청은 결제 등의 필요한 비즈니스를 진행하고, 최종적으로 좌석을 예매완료로 바꿀 때 seat_version이 최초와 다른지 검사한다.
+
+이 때 version이 달라졌다면, 그 사이에 다른 누군가가 좌석을 예약한 것이므로 내 요청 건을 실패시킨다.
+
+일단 진행하고 완료 전에 충돌을 확인해 롤백하는 이 방식을 `낙관적 락`이라고 말한다.  
+낙관적 락은 일단 진행시켜! 이기 때문에, 충돌이 발생한다면 반드시 롤백 프로세스가 필요하다.  
+이미 결제까지 완료한 상황에서 충돌을 확인했으므로, 결제 취소 프로세스를 진행시켜야만 하는 등 오래 걸리고 귀찮은 상황이 발생한다.
+
+하지만 강위찬 무료 콘서트 예매처럼 문제 발생 가능성이 거의 없고 롤백 비용이 적은 서비스에서는, 일단 진행시킨다는 특성 덕에 아래 소개할 '비관적 락'보다 높은 처리량을 얻을 수 있다.
+
+### 셋째. 하나씩 순차 처리하는 방법
+
+동시에 여러 요청이 와도 한번에 하나씩만 처리한다. 나머지 요청들은 앞선 요청이 완료될 때까지 기다린다.  
+애초부터 하나씩 처리하니까, 두번째 요청은 seat 조회 시 이미 예약된 좌석으로 보일 것이다. 동시 요청이 잘 처리되었고 롤백을 생각할 필요도 없어졌다. 이것이 `비관적 락`이다.
+
+하지만 비관락의 치명적 단점이 있었으니.. 순차적 처리로 인해 처리량이 폭망할 수 있기 때문에, 락을 대충 잡아서는 안된다.
+
+## 비관락은 어떻게 구현할까?
+
+### 1. Java synchronized
+
+서버가 한 대라면 스레드 간 경합만 신경쓰면 된다.
+
+Java의 `synchronized`는 같은 JVM에서 한 번에 하나의 스레드만 임계 구역에 들어가도록 한다. 좌석 ID별로 별도 락을 두면, A 좌석을 예약하는 동안 B 좌석 예약까지 막을 필요는 없다.
+
+```java
+@Service
+public class SeatReservationService {
+    private final Map<Long, Object> locks = new ConcurrentHashMap<>();
+
+    public void reserve(Long seatId, Long memberId) {
+        Object lock = locks.computeIfAbsent(seatId, id -> new Object());
+
+        synchronized (lock) {
+            Seat seat = seatRepository.findById(seatId).orElseThrow();
+
+            if (seat.isReserved()) {
+                throw new AlreadyReservedException();
+            }
+
+            seat.reserve(memberId);
+        }
+    }
+}
+```
+
+ `synchronize` 스콥을 조회 시점부터 포함해야 한다. 락을 얻은 첫 요청이 좌석을 예약하면, 다음 요청은 락을 얻은 뒤 이미 예약된 상태를 확인하고 실패 처리된다.
+
+
+
+### 2. `SELECT ... FOR UPDATE`
+
+MSA 환경이라면, 여러 앱이 바라보는 공유 저장소가 필요하다. 우선 가장 구현하기 만만한 RDB를 공유 저장소로 사용하는 방법이다.
+
+MySQL에선 `SELECT ... FOR UPDATE;` 형식으로 테이블의 특정 행에 락을 걸 수 있다.
+
+```java
+@Transactional
+public void reserve(Long seatId, Long memberId) {
+    Seat seat = seatRepository.findByIdForUpdate(seatId)
+        .orElseThrow();
+
+    if (seat.isReserved()) {
+        throw new AlreadyReservedException();
+    }
+
+    seat.reserve(memberId);
+}
+```
+
+```sql
+-- findByForUpdate(seatId)
+SELECT *
+FROM seat
+WHERE id = :seatId
+FOR UPDATE;
+```
+
+첫 요청이 하나의 행을 잠그면 다음 요청은 락이 풀릴 때까지 기다린다. 반드시 트랜잭션 안에서 사용해야 하며, 락을 잡은 상태에서는 DB 커넥션 하나를 계속 잡고있기 때문에, DB 커넥션을 사용해야 하는 다른 비즈니스 로직에서 응답시간이 늦어지는 문제가 발생할 수 있다.
+
+그래서 FOR UPDATE를 이용해 락을 잡는 경우, 락획득 후 외부 API 호출 등의 오래 블락되는 로직이 들어가지 않도록 소스를 잘 짜야한다.
+
+
+
+### 3. Redis Redlock
+
+공유 저장소로 Redis를 많이들 사용한다. 많은 장점이 있는데 락 정보를 저장하기에 충분하고, 빠르고, RDB의 부담을 줄여줄 수 있다. 
+
+첫 요청이 `seat:reservation:A` 라는 키가 있는지 확인하고, 없으면 키 생성 후 비즈니스를 진행한다. 이후 요청은 `seat:reservation:A` 조회 시 키가 있으므로, `waitTime` 만큼만 기다려보고 계속 락이 있으면 실패 처리한다.
+
+개념적으로는 Redis의 아래 명령으로 락을 선점한다.
+
+```text
+SET seat:reservation:A 8f3b... NX PX 3000
+```
+
+`SET`은 키에 값을 저장한다. `NX`는 키가 없을 때만 저장하라는 뜻이므로, 여러 요청이 동시에 실행해도 단 하나만 락을 얻는다. `PX 3000`은 키를 3000ms 뒤 자동으로 만료시키며, 이것이 lease time이다. 값에는 락을 얻은 요청을 식별할 수 있는 랜덤 토큰을 넣는다. 직접 Redis 명령으로 구현한다면, 락을 해제할 때도 이 토큰이 일치하는 경우에만 키를 삭제해야 한다. Redisson 같은 라이브러리를 사용하면 이 과정을 대신 처리해 준다.
+
+```java
+RLock lock = redissonClient.getLock("seat:reservation:1");
+
+boolean locked = lock.tryLock(waitTime, leaseTime, TimeUnit.SECONDS);
+if (!locked) {
+    throw new ReservationInProgressException();
+}
+
+try {
+    reservationTransaction.reserve(1L, memberId);
+} finally {
+    lock.unlock();
+}
+```
+
+
+
+다 좋아보이지만, 타이밍 문제가 있다.
+
+요청 A가 3초의 lease time으로 락을 얻은 직후, 네트워크 지연으로 결제 API가 5초 동안 멈췄다고 해보자. 3초가 지나면 Redis는 락을 만료시키고, 요청 B는 같은 락을 얻어 예약을 진행할 수 있다. 이후 요청 A의 결제 API가 성공적으로 끝나서 재개된다면, A, B가 동시에 비즈니스를 처리하게 된다.
+
+lease time을 엄청 길게 잡으면 이 문제를 없엘 수 있지만, 장애가 났을 때 다음 요청이 엄청 오래 기다려야 한다. 짧게 잡으면 복구는 빠르지만 앞 작업이 끝나기 전에 락이 풀릴 위험이 있다.
+
+
+
+## 어떤 방법을 선택해야 할까?
+
+개발 환경과 비즈니스에 따라 선택하면 좋다.
+
+
+| 방법                      | 적합한 환경           | 주의할 점                            |
+| ----------------------- | ---------------- | -------------------------------- |
+| `synchronized`          | 서버가 한 대일 때       | 다중 인스턴스에서 못쓴다.                   |
+| `SELECT ... FOR UPDATE` | RDB 널널할 때        | 커넥션 과점유 문제를 생각해봐야 한다.            |
+| Redis Redlock           | RDB 부하를 줄이고 싶을 떄 | lease time이 작으면, 동시성 문제 발생 가능하다. |
+
+우리 서비스는 Redlock을 적극 활용하고 있다.
+
+## Shopify가 Redis 걷어내고 RDB만으로 동시성 처리한 사례
+
+Shopify에서 Redis + MySQL로 주문을 구현했었는데, Redis와 MySQL을 한 트랜잭션으로 묶는게 불가능하니, 장애 시 과판매나 예상못한 품절이 발생했었다고 한다.
+
+그래서 Redis를 걷어내려고 MySQL에 inventory_pool 테이블을 만들고, 재고 한 개를 한 개 행으로 삽입하여 `FOR UPDATE + SKIP LOCKED` 를 활용해, 실제 대량 트래픽 환경에서 높은 처리량을 달성한 케이스가 있다.
+
+Shopify 사람들은 진짜 천재같다. 꼭 보시길..
+
+[원문 링크](https://shopify.engineering/scaling-inventory-reservations)
+
+
+
+끝

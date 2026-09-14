@@ -1,0 +1,174 @@
+---
+title: Concurrency Problems and Solutions
+description: 
+date: 2026-09-05
+tags:
+  - Backend
+---
+
+Concurrency problems are a real headache.
+
+I have developed and operated an app-tech service in an MSA environment for three years. Embarrassingly, I have run into concurrency issues in businesses where consistency matters, such as issuing coupons in exchange for points.
+
+I am writing this as a reminder to myself to do better on the next project, and in the hope that you, the reader, will take something useful away from it.
+
+## What is a concurrency problem?
+
+A concurrency problem occurs when `multiple threads or transactions access the same data at the same time` and modify it, producing an unexpected result.
+
+For a quick example, suppose a Sung Si-kyung concert is selling like hotcakes and only one seat remains.
+What if 100 people press the booking button at exactly the same time? What if 100 booking requests reach the server at once?
+
+If you do not want to put 100 people in a single seat, you need to solve this problem thoughtfully.
+
+## An overview of the solutions
+
+Broadly speaking, there are three approaches.
+
+### First: deal with it afterward
+
+Come to work the next day, inspect the data, and send apology messages to 99 people.  
+For an important service such as concert ticketing, though, people will be very upset and I will soon be unemployed. Whether this is acceptable depends on the importance of the business.
+
+### Second: detect a conflict before completing the work
+
+Add a field called `seat_version int` to the `seat` table.
+Every request first reads the `seat_version` of the seat it wants to reserve.  
+Each request performs the necessary business work, such as payment, and checks whether `seat_version` has changed from its original value just before marking the seat as reserved.
+
+If the version has changed, someone else reserved the seat in the meantime, so the current request fails.
+
+This approach, where work proceeds first and a conflict is detected before completion so the result can be rolled back, is called an `optimistic lock`.  
+Optimistic locking says, “let it proceed first,” so a rollback process is essential when a conflict occurs.  
+If the conflict is discovered after payment has already succeeded, for example, a payment-cancellation process is needed. That can be slow and cumbersome.
+
+However, for a service such as a free Kang Wichan concert reservation, where conflicts are extremely unlikely and rollback is cheap, letting requests proceed can provide higher throughput than the pessimistic locking approach introduced below.
+
+### Third: process requests one at a time
+
+Even when several requests arrive simultaneously, process only one at a time. The rest wait until the earlier request finishes.  
+Since requests are handled serially from the start, the second request will see that the seat is already reserved when it reads it. Concurrent requests are handled safely and there is no need to consider rollback. This is `pessimistic locking`.
+
+The critical downside of pessimistic locking is that serial processing can severely reduce throughput, so locks must not be taken casually.
+
+## How can pessimistic locking be implemented?
+
+### 1. Java `synchronized`
+
+With only one server, you only need to worry about contention between threads.
+
+Java's `synchronized` allows only one thread in the same JVM to enter a critical section at a time. If you maintain a separate lock for each seat ID, reserving seat A does not need to block reservations for seat B.
+
+```java
+@Service
+public class SeatReservationService {
+    private final Map<Long, Object> locks = new ConcurrentHashMap<>();
+
+    public void reserve(Long seatId, Long memberId) {
+        Object lock = locks.computeIfAbsent(seatId, id -> new Object());
+
+        synchronized (lock) {
+            Seat seat = seatRepository.findById(seatId).orElseThrow();
+
+            if (seat.isReserved()) {
+                throw new AlreadyReservedException();
+            }
+
+            seat.reserve(memberId);
+        }
+    }
+}
+```
+
+The `synchronized` scope must include the read operation. Once the first request that acquired the lock reserves the seat, the next request acquires the lock, finds the seat already reserved, and fails.
+
+### 2. `SELECT ... FOR UPDATE`
+
+In an MSA environment, you need shared storage that multiple applications can see. One of the most straightforward options is to use an RDB as that shared store.
+
+In MySQL, `SELECT ... FOR UPDATE;` can lock a specific row in a table.
+
+```java
+@Transactional
+public void reserve(Long seatId, Long memberId) {
+    Seat seat = seatRepository.findByIdForUpdate(seatId)
+        .orElseThrow();
+
+    if (seat.isReserved()) {
+        throw new AlreadyReservedException();
+    }
+
+    seat.reserve(memberId);
+}
+```
+
+```sql
+-- findByForUpdate(seatId)
+SELECT *
+FROM seat
+WHERE id = :seatId
+FOR UPDATE;
+```
+
+Once the first request locks a row, later requests wait until the lock is released. This must be used within a transaction. Because a database connection remains held while the lock is held, other business logic that needs a DB connection can experience slower response times.
+
+Therefore, when taking a lock with `FOR UPDATE`, structure the code so that no long-blocking work, such as an external API call, happens after acquiring the lock.
+
+### 3. Redis Redlock
+
+Redis is commonly used as shared storage. It has many advantages: it can store lock information, it is fast, and it can reduce the load on an RDB.
+
+The first request checks whether a key named `seat:reservation:A` exists. If it does not, the request creates the key and proceeds with the business work. Later requests find the key when they look up `seat:reservation:A`, wait only for `waitTime`, and fail if the lock remains.
+
+Conceptually, the following Redis command acquires the lock.
+
+```text
+SET seat:reservation:A 8f3b... NX PX 3000
+```
+
+`SET` stores a value under a key. `NX` means “store only if the key does not exist,” so only one request can acquire the lock even if several run concurrently. `PX 3000` automatically expires the key after 3,000 ms; this is the lease time. The value contains a random token that identifies the request that acquired the lock. If you implement this with Redis commands directly, delete the key on release only when the token also matches. Libraries such as Redisson handle this process for you.
+
+```java
+RLock lock = redissonClient.getLock("seat:reservation:1");
+
+boolean locked = lock.tryLock(waitTime, leaseTime, TimeUnit.SECONDS);
+if (!locked) {
+    throw new ReservationInProgressException();
+}
+
+try {
+    reservationTransaction.reserve(1L, memberId);
+} finally {
+    lock.unlock();
+}
+```
+
+It all looks good, but there is a timing problem.
+
+Suppose request A acquires a lock with a three-second lease time, and the payment API stops for five seconds because of network latency. After three seconds, Redis expires the lock, and request B can acquire the same lock and proceed with its reservation. If request A resumes after its payment API call succeeds, A and B will process the business operation at the same time.
+
+Making the lease time extremely long can eliminate this problem, but subsequent requests must wait a very long time when a failure occurs. A short lease enables faster recovery, but risks releasing the lock before the earlier operation finishes.
+
+## Which approach should you choose?
+
+Choose according to your development environment and business requirements.
+
+| Approach | Best suited for | Things to watch for |
+| --- | --- | --- |
+| `synchronized` | A single server | It cannot be used across multiple instances. |
+| `SELECT ... FOR UPDATE` | When the RDB has headroom | Consider excessive connection usage. |
+| Redis Redlock | When you want to reduce RDB load | A short lease time can cause concurrency problems. |
+
+Our service uses Redlock extensively.
+
+## How Shopify removed Redis and handled concurrency with an RDB alone
+
+Shopify had implemented orders with Redis and MySQL, but because Redis and MySQL could not be enclosed in a single transaction, failures could cause overselling or unexpected stockouts.
+
+To remove Redis, Shopify created an `inventory_pool` table in MySQL, inserted one unit of inventory per row, and used `FOR UPDATE + SKIP LOCKED` to achieve high throughput under real high-traffic conditions.
+
+The people at Shopify are geniuses. It is well worth reading.
+
+[Original article](https://shopify.engineering/scaling-inventory-reservations)
+
+The end.
