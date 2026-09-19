@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next"
 import i18nConfig from "@/i18n/constant.json"
 import { allPosts } from "@/lib/content"
+import { SITE_URL } from "@/lib/env"
 
-const SITE_URL = process.env.SITE_URL || "https://blog.wichan.dev"
 const locales = i18nConfig.locales
 
 function localeUrl(locale: string, path: string) {

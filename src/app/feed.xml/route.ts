@@ -1,7 +1,6 @@
 import RSS from "rss"
 import { allPosts } from "@/lib/content"
-
-const SITE_URL = process.env.SITE_URL ?? "https://blog.wichan.dev"
+import { SITE_URL } from "@/lib/env"
 
 export async function GET() {
   const feed = new RSS({

@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { Mdx } from "@/components/mdx-components"
 import { allPages } from "@/lib/content"
+import { SITE_URL } from "@/lib/env"
 
 interface RouteParams {
   slug: string[]
@@ -22,8 +23,6 @@ async function getPageFromParams(params: RouteParams) {
 
   return page ?? null
 }
-
-const SITE_URL = process.env.SITE_URL || "https://blog.wichan.dev"
 
 export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const params = await props.params

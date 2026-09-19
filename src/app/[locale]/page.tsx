@@ -2,14 +2,13 @@ import type { Metadata } from "next/types"
 import { getTranslations } from "next-intl/server"
 import { PostList } from "@/components/post-list"
 import { allPosts } from "@/lib/content"
+import { SITE_URL } from "@/lib/env"
 
 interface HomeProps {
   params: Promise<{
     locale: string
   }>
 }
-
-const SITE_URL = process.env.SITE_URL || "https://blog.wichan.dev"
 
 export async function generateMetadata(props: HomeProps): Promise<Metadata> {
   const params = await props.params
