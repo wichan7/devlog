@@ -8,4 +8,4 @@ function requiredEnv(name: string): string {
   return value
 }
 
-export const SITE_URL = requiredEnv("SITE_URL")
+export const SITE_URL = requiredEnv("NEXT_PUBLIC_WEBSITE_URL")
