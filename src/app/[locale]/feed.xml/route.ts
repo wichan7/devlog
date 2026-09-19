@@ -1,8 +1,7 @@
 import RSS from "rss"
 import i18nConfig from "@/i18n/constant.json"
 import { allPosts } from "@/lib/content"
-
-const SITE_URL = process.env.SITE_URL ?? "https://blog.wichan.dev"
+import { SITE_URL } from "@/lib/env"
 
 function feedUrl(locale: string) {
   return locale === i18nConfig.defaultLocale

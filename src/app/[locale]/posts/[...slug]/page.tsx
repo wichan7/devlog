@@ -4,6 +4,7 @@ import Giscus from "@/components/giscus"
 import { Mdx } from "@/components/mdx-components"
 import { Link } from "@/i18n/navigation"
 import { allPosts } from "@/lib/content"
+import { SITE_URL } from "@/lib/env"
 import { formatDate } from "@/lib/format-date"
 
 interface RouteParams {
@@ -25,8 +26,6 @@ async function getPostFromParams(params: RouteParams) {
 
   return post ?? null
 }
-
-const SITE_URL = process.env.SITE_URL || "https://blog.wichan.dev"
 
 export async function generateMetadata(props: PostProps): Promise<Metadata> {
   const params = await props.params
@@ -95,7 +94,7 @@ export default async function PostPage(props: PostProps) {
 
       {/* Article body */}
       <div className="prose max-w-none dark:prose-invert">
-        <Mdx source={post.body.raw} />
+        {await Mdx({ source: post.body.raw })}
       </div>
 
       {/* Tags */}
