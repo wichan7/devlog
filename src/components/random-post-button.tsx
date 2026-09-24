@@ -13,7 +13,7 @@ export function RandomPostButton({ hrefs }: { hrefs: string[] }) {
         const href = hrefs[Math.floor(Math.random() * hrefs.length)]
         if (href) router.push(href)
       }}
-      className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-[var(--color-bg-2)] active:scale-95"
+      className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 active:bg-[var(--color-bg-2)] active:scale-95"
       style={{ border: "1px solid var(--color-border)", color: "var(--color-text-2)" }}
       title="Random post"
       aria-label="Random post"
