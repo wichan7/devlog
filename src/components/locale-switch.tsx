@@ -23,7 +23,7 @@ export function LocaleSwitch({ currentLocale }: LocaleSwitchProps) {
       {({ close }) => (
         <>
           <PopoverButton
-            className="h-9 flex items-center px-2.5 rounded-xl transition-all duration-150 hover:bg-[var(--color-bg-2)] active:scale-95 outline-none"
+            className="h-9 flex items-center px-2.5 rounded-xl transition-all duration-150 active:bg-[var(--color-bg-2)] active:scale-95 outline-none"
             style={{
               border: "1px solid var(--color-border)",
               color: "var(--color-text-2)",
@@ -48,7 +48,7 @@ export function LocaleSwitch({ currentLocale }: LocaleSwitchProps) {
               <button
                 key={locale}
                 onClick={() => changeLocale(locale, close)}
-                className="w-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-left transition-colors hover:bg-[var(--color-bg-2)]"
+                className="w-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-left transition-colors active:bg-[var(--color-bg-2)]"
                 style={{
                   color:
                     locale === currentLocale
