@@ -14,7 +14,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Static pages
   const staticPages: MetadataRoute.Sitemap = [
     { path: "", priority: 1.0 },
-    { path: "/about", priority: 0.8 },
   ].flatMap(({ path, priority }) =>
     locales.map((locale) => ({
       url: localeUrl(locale, path),
