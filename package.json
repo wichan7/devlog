@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@headlessui/react": "^2.2.7",
+    "@jsdevtools/rehype-toc": "^3.0.2",
     "@tailwindcss/typography": "^0.5.9",
     "@types/node": "24.13.3",
     "@types/react": "19.2.18",
@@ -28,6 +29,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "rehype-pretty-code": "^0.14.1",
+    "rehype-slug": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "rss": "^1.2.2",
     "tailwindcss": "3.3.2",

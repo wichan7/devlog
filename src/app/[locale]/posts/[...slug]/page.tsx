@@ -93,8 +93,8 @@ export default async function PostPage(props: PostProps) {
       </header>
 
       {/* Article body */}
-      <div className="prose max-w-none dark:prose-invert">
-        {await Mdx({ source: post.body.raw })}
+      <div className="relative prose max-w-none dark:prose-invert [&_:is(h1,h2,h3,h4,h5,h6)]:scroll-mt-24">
+        {await Mdx({ source: post.body.raw, toc: true })}
       </div>
 
       {/* Tags */}
