@@ -23,14 +23,14 @@ export function LocaleSwitch({ currentLocale }: LocaleSwitchProps) {
       {({ close }) => (
         <>
           <PopoverButton
-            className="h-9 flex items-center px-2.5 rounded-xl transition-all duration-150 active:bg-[var(--color-bg-2)] active:scale-95 outline-none"
+            className="h-7 flex items-center px-[7px] sm:h-8 sm:px-2 rounded-xl transition-all duration-150 active:bg-[var(--color-bg-2)] outline-none"
             style={{
               border: "1px solid var(--color-border)",
               color: "var(--color-text-2)",
             }}
             aria-label="Switch locale"
           >
-            <EarthIcon className="w-3.5 h-3.5" />
+            <EarthIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           </PopoverButton>
 
           <PopoverPanel

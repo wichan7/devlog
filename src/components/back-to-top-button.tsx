@@ -27,7 +27,7 @@ export function BackToTopButton({ label }: { label: string }) {
         ).matches
         window.scrollTo({ top: 0, behavior: reduceMotion ? "instant" : "smooth" })
       }}
-      className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-2)] shadow-md transition-colors hover:bg-[var(--color-bg-2)] hover:text-[var(--color-text)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] sm:right-6 lg:right-[calc(50%-28rem)]"
+      className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-2)] shadow-md transition-colors active:bg-[var(--color-bg-2)] active:text-[var(--color-text)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] sm:right-6 lg:right-[calc(50%-28rem)]"
     >
       <BackToTopIcon className="h-5 w-5" aria-hidden="true" />
     </button>

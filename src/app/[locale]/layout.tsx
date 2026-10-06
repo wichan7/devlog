@@ -45,7 +45,7 @@ export default async function LocaleLayout({
                 <Link
                   href="/"
                   title={t("metadata.title")}
-                  className="min-w-0 truncate text-sm font-bold tracking-tight transition-colors hover:text-[var(--color-accent)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] sm:text-lg"
+                  className="min-w-0 truncate text-lg font-bold tracking-tight transition-colors active:text-[var(--color-accent)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
                 >
                   {t("metadata.title")}
                 </Link>
@@ -60,9 +60,9 @@ export default async function LocaleLayout({
                     rel="noopener noreferrer"
                     aria-label="GitHub"
                     title="GitHub"
-                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--color-border)] text-[var(--color-text-2)] transition-all duration-150 hover:text-[var(--color-text)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] active:scale-95 active:bg-[var(--color-bg-2)]"
+                    className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-xl border border-[var(--color-border)] text-[var(--color-text-2)] transition-all duration-150 hover:text-[var(--color-text)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] active:bg-[var(--color-bg-2)]"
                   >
-                    <GithubIcon className="h-4 w-4" aria-hidden="true" />
+                    <GithubIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
                   </a>
                 </div>
               </div>
