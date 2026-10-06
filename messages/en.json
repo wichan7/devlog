@@ -3,9 +3,9 @@
     "title": "Wichan's Tech Blog",
     "description": "Light and enjoyable tech stories"
   },
-  "menu": {
+  "common": {
     "home": "Home",
-    "about": "About"
+    "backToTop": "Back to top"
   },
   "notFound": {
     "message": "Page not found.",

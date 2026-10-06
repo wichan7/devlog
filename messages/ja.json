@@ -1,11 +1,11 @@
 {
   "metadata": {
-    "title": "ウィチャンの技術ブログ",
+    "title": "Wichanの技術ブログ",
     "description": "気軽に読める面白い技術の話"
   },
-  "menu": {
+  "common": {
     "home": "ホーム",
-    "about": "紹介"
+    "backToTop": "ページの先頭へ戻る"
   },
   "notFound": {
     "message": "ページが見つかりません。",

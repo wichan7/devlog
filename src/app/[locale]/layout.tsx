@@ -2,6 +2,8 @@ import { Analytics } from "@vercel/analytics/react"
 import { notFound } from "next/navigation"
 import { hasLocale, NextIntlClientProvider } from "next-intl"
 import { getTranslations, setRequestLocale } from "next-intl/server"
+import GithubIcon from "@/assets/svg/github.svg"
+import { BackToTopButton } from "@/components/back-to-top-button"
 import { LocaleSwitch } from "@/components/locale-switch"
 import { ThemeToggle } from "@/components/mode-toggle"
 import { RandomPostButton } from "@/components/random-post-button"
@@ -38,44 +40,37 @@ export default async function LocaleLayout({
       <body className="antialiased min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] tabular-nums">
         <NextIntlClientProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <div className="max-w-3xl mx-auto py-4 sm:py-8 px-4 sm:px-6">
-              {/* 헤더 */}
-              <header className="sticky top-3 z-50 mb-6 sm:mb-10">
-                <div
-                  className="backdrop-blur-md rounded-2xl px-3 py-2 flex items-center justify-between gap-2"
-                  style={{
-                    background: "var(--color-bg-header)",
-                    border: "1px solid var(--color-border)",
-                    boxShadow:
-                      "rgba(0,0,0,0.04) 0px 2px 12px, rgba(0,0,0,0.02) 0px 1px 4px",
-                  }}
+            <header className="relative z-50 border-b border-[var(--color-border)] bg-[var(--color-bg-header)]">
+              <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-4 sm:gap-3 sm:px-6">
+                <Link
+                  href="/"
+                  title={t("metadata.title")}
+                  className="min-w-0 truncate text-sm font-bold tracking-tight transition-colors hover:text-[var(--color-accent)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] sm:text-lg"
                 >
-                  <div className="flex items-center gap-2">
-                    <ThemeToggle />
-                    <LocaleSwitch currentLocale={locale} />
-                    <RandomPostButton hrefs={postUrls} />
-                    <RssButton href={feedUrl} />
-                  </div>
-
-                  <nav className="flex items-center gap-0.5 ml-auto text-sm font-medium">
-                    <Link
-                      href="/"
-                      className="px-3 py-1.5 rounded-lg text-[var(--color-text-2)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] transition-all duration-150"
-                    >
-                      {t("menu.home")}
-                    </Link>
-                    <Link
-                      href="/about"
-                      className="px-3 py-1.5 rounded-lg text-[var(--color-text-2)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] transition-all duration-150"
-                    >
-                      {t("menu.about")}
-                    </Link>
-                  </nav>
+                  {t("metadata.title")}
+                </Link>
+                <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+                  <ThemeToggle />
+                  <LocaleSwitch currentLocale={locale} />
+                  <RandomPostButton hrefs={postUrls} />
+                  <RssButton href={feedUrl} />
+                  <a
+                    href="https://github.com/wichan7"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="GitHub"
+                    title="GitHub"
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--color-border)] text-[var(--color-text-2)] transition-all duration-150 hover:text-[var(--color-text)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] active:scale-95 active:bg-[var(--color-bg-2)]"
+                  >
+                    <GithubIcon className="h-4 w-4" aria-hidden="true" />
+                  </a>
                 </div>
-              </header>
-
-              <main className="animate-fade-in">{children}</main>
-            </div>
+              </div>
+            </header>
+            <main className="mx-auto max-w-3xl animate-fade-in px-4 py-8 sm:px-6 sm:py-12">
+              {children}
+            </main>
+            <BackToTopButton label={t("common.backToTop")} />
             <Analytics />
           </ThemeProvider>
         </NextIntlClientProvider>
